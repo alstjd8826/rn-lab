@@ -1,0 +1,17 @@
+{
+  "cxxNamespace": ["nitrolab"],
+  "ios": {
+    "iosModuleName": "NitroLab"
+  },
+  "android": {
+    "androidNamespace": ["nitrolab"],
+    "androidCxxLibName": "NitroLab"
+  },
+  "autolinking": {
+    "Lab": {
+      "ios": { "language": "swift", "implementationClassName": "HybridLab" },
+      "android": { "language": "kotlin", "implementationClassName": "HybridLab" }
+    }
+  },
+  "ignorePaths": ["node_modules"]
+}

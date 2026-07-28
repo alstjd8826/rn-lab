@@ -1,0 +1,17 @@
+{
+  "cxxNamespace": ["timeractivity"],
+  "ios": {
+    "iosModuleName": "NitroTimerActivity"
+  },
+  "android": {
+    "androidNamespace": ["timeractivity"],
+    "androidCxxLibName": "NitroTimerActivity"
+  },
+  "autolinking": {
+    "TimerActivity": {
+      "ios": { "language": "swift", "implementationClassName": "HybridTimerActivity" },
+      "android": { "language": "kotlin", "implementationClassName": "HybridTimerActivity" }
+    }
+  },
+  "ignorePaths": ["node_modules"]
+}

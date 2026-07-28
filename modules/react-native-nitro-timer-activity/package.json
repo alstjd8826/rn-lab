@@ -1,0 +1,27 @@
+{
+  "name": "react-native-nitro-timer-activity",
+  "version": "0.0.1",
+  "description": "Live timer via iOS Live Activity / Android ongoing notification (Nitro)",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "react-native": "./src/index.ts",
+  "source": "./src/index.ts",
+  "module_name": "NitroTimerActivity",
+  "files": [
+    "src",
+    "ios",
+    "android",
+    "nitrogen",
+    "nitro.json",
+    "*.podspec",
+    "README.md"
+  ],
+  "scripts": {
+    "nitrogen": "nitrogen"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*",
+    "react-native-nitro-modules": "*"
+  }
+}

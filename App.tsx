@@ -7,6 +7,9 @@ import {
   isTimerActivitySupported,
   startTimer,
 } from 'react-native-nitro-timer-activity'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
+import GestureDemo from './src/GestureDemo'
+import LayoutTransitionDemo from './src/LayoutTransitionDemo'
 import ReanimatedDemo from './src/ReanimatedDemo'
 
 export default function App() {
@@ -56,12 +59,13 @@ export default function App() {
   }
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.title}>🧪 Nitro Lab</Text>
+    <GestureHandlerRootView style={styles.scroll}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>🧪 Nitro Lab</Text>
       <Text style={styles.line}>hello: {greeting}</Text>
       <Text style={styles.line}>add(2,3): {sum}</Text>
       <Text style={styles.line}>delay: {delayMsg}</Text>
@@ -85,8 +89,17 @@ export default function App() {
 
       <ReanimatedDemo />
 
+      <View style={styles.divider} />
+
+      <GestureDemo />
+
+      <View style={styles.divider} />
+
+      <LayoutTransitionDemo />
+
       <StatusBar style="auto" />
-    </ScrollView>
+      </ScrollView>
+    </GestureHandlerRootView>
   )
 }
 

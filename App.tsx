@@ -1,12 +1,13 @@
 import { StatusBar } from 'expo-status-bar'
 import { useRef, useState } from 'react'
-import { Button, StyleSheet, Text, View } from 'react-native'
+import { Button, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { add, delay, hello } from 'react-native-nitro-lab'
 import {
   endTimer,
   isTimerActivitySupported,
   startTimer,
 } from 'react-native-nitro-timer-activity'
+import ReanimatedDemo from './src/ReanimatedDemo'
 
 export default function App() {
   const [greeting] = useState(() => hello('Nitro'))
@@ -55,7 +56,11 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={styles.title}>🧪 Nitro Lab</Text>
       <Text style={styles.line}>hello: {greeting}</Text>
       <Text style={styles.line}>add(2,3): {sum}</Text>
@@ -76,18 +81,24 @@ export default function App() {
         <Button title="전체 종료" color="#c0392b" onPress={stopAll} />
       </View>
 
+      <View style={styles.divider} />
+
+      <ReanimatedDemo />
+
       <StatusBar style="auto" />
-    </View>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: '#fff' },
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
+    paddingTop: 64,
     gap: 8,
   },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 8 },

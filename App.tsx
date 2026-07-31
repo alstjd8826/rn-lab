@@ -10,6 +10,7 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import FluidHeightFieldDemo from './src/FluidHeightFieldDemo'
 import FluidNavierStokesDemo from './src/FluidNavierStokesDemo'
+import FluidParticlesDemo from './src/FluidParticlesDemo'
 import FluidWebViewDemo from './src/FluidWebViewDemo'
 import GestureDemo from './src/GestureDemo'
 import GpuPingPongTest from './src/GpuPingPongTest'
@@ -31,6 +32,7 @@ const DEMOS: { title: string; Component: ComponentType }[] = [
   { title: '🧪 GPU ping-pong 원시', Component: GpuPingPongTest },
   { title: '🌊 2a · Skia 유체 (advection)', Component: FluidNavierStokesDemo },
   { title: '🌫️ 2b · WebView 유체', Component: FluidWebViewDemo },
+  { title: '💦 #3 · 입자 물 (SPH-lite)', Component: FluidParticlesDemo },
 ]
 
 export default function App() {

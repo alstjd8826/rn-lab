@@ -1,4 +1,6 @@
 import { Canvas, Points, type SkPoint } from "@shopify/react-native-skia";
+import { Accelerometer } from "expo-sensors";
+import { useEffect } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import {
@@ -14,7 +16,8 @@ const H = 360;
 const N = 250;
 const R = 16; // 반발 반경(px)
 const RAD = 5; // 입자 반지름(px)
-const G = 0.35; // 중력
+const G = 0.35; // 기본 중력(센서 오기 전 폴백)
+const GT = 0.4; // 기울기 중력 강도
 const REP = 0.6; // 반발 강도
 const DAMP = 0.99;
 
@@ -29,6 +32,17 @@ export default function FluidParticlesDemo() {
   const vy = useSharedValue<number[]>([]);
   const tick = useSharedValue(0);
   const touch = useSharedValue<number[]>([-1, -1, 0, 0, 0]); // x,y,dx,dy,on
+  const grav = useSharedValue<number[]>([0, G]); // 화면좌표 중력벡터
+
+  // 가속도계로 기울기 → 중력 방향. 화면: +x 오른쪽, +y 아래.
+  // 인버트 느낌이면 부호(gx/gy) 뒤집으면 됨.
+  useEffect(() => {
+    Accelerometer.setUpdateInterval(16);
+    const sub = Accelerometer.addListener(({ x, y }) => {
+      grav.value = [x * GT, -y * GT];
+    });
+    return () => sub.remove();
+  }, [grav]);
 
   const points = useDerivedValue<SkPoint[]>(() => {
     tick.value; // 매 프레임 재계산 트리거
@@ -66,8 +80,13 @@ export default function FluidParticlesDemo() {
     const VY = vy.value;
     const n = X.length;
 
-    // 중력
-    for (let i = 0; i < n; i++) VY[i] += G;
+    // 기울기 중력
+    const gx = grav.value[0];
+    const gy = grav.value[1];
+    for (let i = 0; i < n; i++) {
+      VX[i] += gx;
+      VY[i] += gy;
+    }
 
     // 이웃 반발 (O(n²))
     for (let i = 0; i < n; i++) {

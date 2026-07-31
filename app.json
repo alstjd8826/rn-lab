@@ -10,7 +10,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.gguge.rn-lab",
       "infoPlist": {
-        "NSSupportsLiveActivities": true
+        "NSSupportsLiveActivities": true,
+        "NSMotionUsageDescription": "입자 물 데모에서 기기 기울기로 중력 방향을 조절합니다."
       }
     },
     "android": {

@@ -4,6 +4,7 @@
   "main": "index.ts",
   "dependencies": {
     "@bacons/apple-targets": "^5.0.0",
+    "@shopify/react-native-skia": "2.6.2",
     "expo": "~57.0.8",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",

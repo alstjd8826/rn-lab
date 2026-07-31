@@ -11,6 +11,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import GestureDemo from './src/GestureDemo'
 import LayoutTransitionDemo from './src/LayoutTransitionDemo'
 import ReanimatedDemo from './src/ReanimatedDemo'
+import FluidHeightFieldDemo from './src/FluidHeightFieldDemo'
+import RippleReanimatedDemo from './src/RippleReanimatedDemo'
+import RippleSkiaDemo from './src/RippleSkiaDemo'
 
 export default function App() {
   const [greeting] = useState(() => hello('Nitro'))
@@ -96,6 +99,18 @@ export default function App() {
       <View style={styles.divider} />
 
       <LayoutTransitionDemo />
+
+      <View style={styles.divider} />
+
+      <RippleReanimatedDemo />
+
+      <View style={styles.divider} />
+
+      <RippleSkiaDemo />
+
+      <View style={styles.divider} />
+
+      <FluidHeightFieldDemo />
 
       <StatusBar style="auto" />
       </ScrollView>

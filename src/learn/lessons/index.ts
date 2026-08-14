@@ -1,18 +1,11 @@
 import type { Lesson } from '../types'
 import { lesson01 } from './01-jsi'
+import { lesson02 } from './02-fabric'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
   lesson01,
-  {
-    no: '②',
-    slug: 'fabric',
-    title: 'Fabric',
-    summary: '화면을 그리는 새 방식. 왜 트리를 불변으로 만들어야 했나',
-    comingUp:
-      'codegenNativeComponent 로 네이티브 뷰를 직접 만들어서, 레이아웃을 동기로 재는 것과 ' +
-      '껍데기 View 가 실제 뷰로 안 만들어지는 것(뷰 플래트닝)을 확인합니다.',
-  },
+  lesson02,
   {
     no: '③',
     slug: 'turbomodules',

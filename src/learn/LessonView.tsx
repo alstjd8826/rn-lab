@@ -85,7 +85,8 @@ export function LessonView({
 }
 
 const s = StyleSheet.create({
-  wrap: { alignSelf: 'stretch', gap: 4 },
+  // App.tsx 의 paddingTop(56) 만으로는 다이나믹 아일랜드를 못 피한다.
+  wrap: { alignSelf: 'stretch', gap: 4, paddingTop: 34 },
   back: { paddingVertical: 6, alignSelf: 'flex-start' },
   backText: { fontSize: 15.5, fontWeight: '700', color: C.struct },
 

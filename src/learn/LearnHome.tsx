@@ -68,7 +68,7 @@ export default function LearnHome() {
 }
 
 const s = StyleSheet.create({
-  wrap: { alignSelf: 'stretch', gap: 22 },
+  wrap: { alignSelf: 'stretch', gap: 22, paddingTop: 34 },
 
   head: { gap: 8 },
   eyebrow: {

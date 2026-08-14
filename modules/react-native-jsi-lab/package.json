@@ -1,0 +1,33 @@
+{
+  "name": "react-native-jsi-lab",
+  "version": "0.0.1",
+  "description": "Raw JSI playground — jsi::HostObject 를 런타임 전역에 직접 심는다",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "react-native": "./src/index.ts",
+  "source": "./src/index.ts",
+  "files": [
+    "src",
+    "cpp",
+    "ios",
+    "*.podspec",
+    "README.md"
+  ],
+  "codegenConfig": {
+    "name": "JsiLabSpecs",
+    "type": "modules",
+    "jsSrcsDir": "src/specs",
+    "android": {
+      "javaPackageName": "com.gguge.jsilab.specs"
+    },
+    "ios": {
+      "modulesProvider": {
+        "NativeJsiLab": "NativeJsiLabProvider"
+      }
+    }
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

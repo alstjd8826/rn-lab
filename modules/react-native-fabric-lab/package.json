@@ -1,0 +1,32 @@
+{
+  "name": "react-native-fabric-lab",
+  "version": "0.0.1",
+  "description": "Fabric playground — 네이티브 뷰 계층 깊이를 스스로 보고하는 뷰",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "react-native": "./src/index.ts",
+  "source": "./src/index.ts",
+  "files": [
+    "src",
+    "ios",
+    "*.podspec",
+    "README.md"
+  ],
+  "codegenConfig": {
+    "name": "FabricLabSpecs",
+    "type": "components",
+    "jsSrcsDir": "src/specs",
+    "android": {
+      "javaPackageName": "com.gguge.fabriclab.specs"
+    },
+    "ios": {
+      "componentProvider": {
+        "DepthProbeView": "DepthProbeView"
+      }
+    }
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

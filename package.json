@@ -10,6 +10,7 @@
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-native": "0.86.0",
+    "react-native-fabric-lab": "file:./modules/react-native-fabric-lab",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-jsi-lab": "file:./modules/react-native-jsi-lab",
     "react-native-nitro-lab": "file:./modules/react-native-nitro-lab",

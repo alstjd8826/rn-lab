@@ -15,6 +15,7 @@ import FluidWebViewDemo from './src/FluidWebViewDemo'
 import GestureDemo from './src/GestureDemo'
 import GpuPingPongTest from './src/GpuPingPongTest'
 import LayoutTransitionDemo from './src/LayoutTransitionDemo'
+import LearnHome from './src/learn/LearnHome'
 import NitroLabDemo from './src/NitroLabDemo'
 import ReanimatedDemo from './src/ReanimatedDemo'
 import RippleReanimatedDemo from './src/RippleReanimatedDemo'
@@ -22,6 +23,7 @@ import RippleSkiaDemo from './src/RippleSkiaDemo'
 
 // 한 번에 하나만 마운트 → 데모별 per-frame 루프가 동시에 안 돌아 크래시 방지.
 const DEMOS: { title: string; Component: ComponentType }[] = [
+  { title: '📚 RN 학습 — 새 구조 익히기', Component: LearnHome },
   { title: '🧪 Nitro Lab + Live Timer', Component: NitroLabDemo },
   { title: '🌀 Reanimated 4', Component: ReanimatedDemo },
   { title: '👆 제스처 드래그+스프링', Component: GestureDemo },

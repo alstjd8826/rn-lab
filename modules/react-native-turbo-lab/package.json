@@ -1,0 +1,33 @@
+{
+  "name": "react-native-turbo-lab",
+  "version": "0.0.1",
+  "description": "TurboModule playground — 모듈이 언제 만들어지는지 시각으로 증명",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "react-native": "./src/index.ts",
+  "source": "./src/index.ts",
+  "files": [
+    "src",
+    "cpp",
+    "ios",
+    "*.podspec",
+    "README.md"
+  ],
+  "codegenConfig": {
+    "name": "TurboLabSpecs",
+    "type": "modules",
+    "jsSrcsDir": "src/specs",
+    "android": {
+      "javaPackageName": "com.gguge.turbolab.specs"
+    },
+    "ios": {
+      "modulesProvider": {
+        "NativeTurboLab": "NativeTurboLabProvider"
+      }
+    }
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-native": "*"
+  }
+}

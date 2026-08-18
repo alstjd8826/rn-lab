@@ -1,20 +1,13 @@
 import type { Lesson } from '../types'
 import { lesson01 } from './01-jsi'
 import { lesson02 } from './02-fabric'
+import { lesson03 } from './03-turbomodules'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
   lesson01,
   lesson02,
-  {
-    no: '③',
-    slug: 'turbomodules',
-    title: 'TurboModules',
-    summary: '네이티브 기능을 필요할 때만 만드는 방식',
-    comingUp:
-      '순수 TurboModule 을 하나 더 만들어서, 모듈이 언제 생성되는지 로그로 증명합니다. ' +
-      'Android 쪽도 여기서 함께 뚫을 예정입니다.',
-  },
+  lesson03,
   {
     no: '④',
     slug: 'codegen',

@@ -4,7 +4,13 @@ import { DepthProbeView } from 'react-native-fabric-lab'
 import { C, MONO } from '../theme'
 import type { Lesson } from '../types'
 
-type Probe = { depth: number; width: number; height: number; chain: string }
+type Probe = {
+  subtreeCount: number
+  depth: number
+  width: number
+  height: number
+  chain: string
+}
 
 // ─────────────────────────────────────────────
 // 실험 1 · 뷰 플래트닝
@@ -17,74 +23,81 @@ function FlatteningDemo() {
   return (
     <View style={d.wrap}>
       <View style={d.trees}>
-        {/* A · 레이아웃 전용 View 3겹 (배경 없음) → 플래트닝 대상 */}
+        {/* A · 껍데기 View 3겹을 프로브 "안"에 넣는다 → 몇 개가 실제 뷰가 되나 */}
         <View style={d.treeCol}>
           <Text style={d.treeLabel}>A · 껍데기 View 3겹</Text>
           <Text style={d.treeCode}>{'padding 만 있음\n배경·테두리 없음'}</Text>
-          <View style={{ padding: 4 }}>
-            <View style={{ padding: 4 }}>
-              <View style={{ padding: 4 }}>
-                <DepthProbeView
-                  label="A"
-                  style={d.probe}
-                  onProbe={(e) => setFlat(e.nativeEvent)}
-                />
+          <DepthProbeView
+            label=""
+            style={d.probe}
+            onProbe={(e) => setFlat(e.nativeEvent)}
+          >
+            <View style={{ padding: 5 }}>
+              <View style={{ padding: 5 }}>
+                <View style={{ padding: 5 }}>
+                  <View style={d.leaf} />
+                </View>
               </View>
             </View>
-          </View>
+          </DepthProbeView>
         </View>
 
-        {/* B · 같은 3겹인데 배경색이 있음 → 플래트닝 안 됨 */}
+        {/* B · 같은 3겹인데 배경색이 있음 → 실제 뷰가 필요 */}
         <View style={d.treeCol}>
           <Text style={d.treeLabel}>B · 배경 있는 View 3겹</Text>
           <Text style={d.treeCode}>{'backgroundColor 있음\n→ 실제 뷰 필요'}</Text>
-          <View style={{ padding: 4, backgroundColor: '#F3E7DA' }}>
-            <View style={{ padding: 4, backgroundColor: '#EBD8C4' }}>
-              <View style={{ padding: 4, backgroundColor: '#E2C9AD' }}>
-                <DepthProbeView
-                  label="B"
-                  style={d.probe}
-                  onProbe={(e) => setSolid(e.nativeEvent)}
-                />
+          <DepthProbeView
+            label=""
+            style={d.probe}
+            onProbe={(e) => setSolid(e.nativeEvent)}
+          >
+            <View style={{ padding: 5, backgroundColor: '#F3E7DA' }}>
+              <View style={{ padding: 5, backgroundColor: '#EBD8C4' }}>
+                <View style={{ padding: 5, backgroundColor: '#E2C9AD' }}>
+                  <View style={d.leaf} />
+                </View>
               </View>
             </View>
-          </View>
+          </DepthProbeView>
         </View>
       </View>
 
       <View style={d.scoreRow}>
         <View style={d.score}>
-          <Text style={d.scoreLabel}>A 네이티브 깊이</Text>
+          <Text style={d.scoreLabel}>A 실제 뷰</Text>
           <Text style={[d.scoreVal, { color: C.js }]}>
-            {flat ? flat.depth : '—'}
+            {flat ? flat.subtreeCount : '—'}
           </Text>
         </View>
         <View style={d.score}>
-          <Text style={d.scoreLabel}>B 네이티브 깊이</Text>
+          <Text style={d.scoreLabel}>B 실제 뷰</Text>
           <Text style={[d.scoreVal, { color: C.native }]}>
-            {solid ? solid.depth : '—'}
+            {solid ? solid.subtreeCount : '—'}
           </Text>
         </View>
         <View style={d.score}>
           <Text style={d.scoreLabel}>차이</Text>
           <Text style={[d.scoreVal, { color: C.struct }]}>
-            {flat && solid ? solid.depth - flat.depth : '—'}
+            {flat && solid ? solid.subtreeCount - flat.subtreeCount : '—'}
           </Text>
         </View>
       </View>
 
       {flat && solid ? (
         <Text style={d.verdict}>
-          {solid.depth > flat.depth
-            ? `✅ A 쪽 껍데기 View ${solid.depth - flat.depth}개가 실제 뷰로 만들어지지 않았습니다`
-            : '두 트리의 깊이가 같습니다'}
+          {solid.subtreeCount > flat.subtreeCount
+            ? `✅ 같은 3겹인데 A 쪽이 ${solid.subtreeCount - flat.subtreeCount}개 적습니다 — 껍데기가 실제 뷰로 안 만들어졌습니다`
+            : '두 트리의 실제 뷰 개수가 같습니다'}
         </Text>
       ) : (
         <Text style={d.hint}>두 상자가 화면에 보이면 위 숫자가 채워집니다.</Text>
       )}
 
-      {flat ? (
-        <Text style={d.chain}>A 의 부모 체인 · {flat.chain}</Text>
+      {flat && solid ? (
+        <Text style={d.chain}>
+          조상 수는 A {flat.depth} · B {solid.depth} 로 같습니다. 조상 수는 실제 뷰
+          개수가 아니라 자식을 담는 뷰(스택 컨텍스트) 개수라서 그렇습니다.
+        </Text>
       ) : null}
     </View>
   )
@@ -454,7 +467,9 @@ export const lesson02: Lesson = {
               side: 'native',
               text:
                 '배경색도 테두리도 없고 레이아웃 용도로만 있는 View 는 ' +
-                '**실제 뷰를 아예 만들지 않습니다.** 자식들이 위 계층으로 올라붙습니다. ' +
+                '**실제 뷰를 아예 만들지 않습니다.** 자식들이 위 계층으로 올라붙습니다.\n\n' +
+                '주의할 게 하나 있는데, **“뷰를 만든다” 와 “자식을 담는다” 는 별개 조건**입니다. ' +
+                '배경만 있는 뷰는 만들어지지만 자식은 담지 않아서, 자식들이 위로 올라가 형제가 됩니다. ' +
                 '아래 실험에서 이걸 숫자로 봅니다.',
             },
           ],
@@ -471,16 +486,29 @@ export const lesson02: Lesson = {
           kind: 'demo',
           title: '실험 1 · 뷰 플래트닝',
           text:
-            '같은 뷰를 **3겹으로 감싼 두 트리**에 넣었습니다. A 는 껍데기(padding 만), ' +
-            'B 는 배경색이 있습니다. 뷰가 스스로 센 네이티브 깊이를 비교합니다.',
+            '**똑같이 3겹으로 감싼 두 트리**입니다. A 는 껍데기(padding 만), B 는 배경색이 있습니다. ' +
+            '각 상자가 자기 안에 **실제로 만들어진 네이티브 뷰가 몇 개인지** 세어서 알려줍니다.',
           render: () => <FlatteningDemo />,
         },
         {
           kind: 'callout',
           tone: 'info',
           text:
-            'B 가 더 깊게 나오면 — **A 쪽 껍데기 View 들이 실제 뷰로 만들어지지 않았다**는 뜻입니다. ' +
-            '레이아웃에만 쓰이니 Fabric 이 생략한 것입니다.',
+            'A 는 1, B 는 4 가 나옵니다. 차이가 정확히 **3** — A 쪽 껍데기 3겹이 ' +
+            '네이티브 뷰를 하나도 안 만든 것입니다. 레이아웃 계산은 섀도우 트리에서 끝났으니 ' +
+            '실제 뷰가 필요 없었던 거죠.',
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
+          title: '처음에 틀렸던 것',
+          text:
+            '이 실험을 원래 **조상 수를 세는** 방식으로 만들었는데, A 와 B 가 똑같이 10 이 나왔습니다. ' +
+            '조상 수는 실제 뷰 개수가 아니었기 때문입니다.\n\n' +
+            'Fabric 은 조건을 **두 가지로 따로** 봅니다 — “실제 뷰가 필요한가(배경·테두리·그림자)” 와 ' +
+            '“자식을 자기 안에 담아야 하는가(overflow·opacity·transform 등, 스택 컨텍스트)”. ' +
+            '**배경색은 앞의 조건만 만족**시킵니다. 그래서 배경 뷰는 만들어지되 자식들은 위로 끌어올려져 ' +
+            '형제로 붙습니다. 조상 체인에 안 잡히는 이유입니다.',
         },
         {
           kind: 'demo',
@@ -557,7 +585,8 @@ const d = StyleSheet.create({
   treeCol: { flex: 1, gap: 5 },
   treeLabel: { fontSize: 12.5, fontWeight: '800', color: C.ink },
   treeCode: { fontFamily: MONO, fontSize: 9.5, lineHeight: 14, color: C.ink3 },
-  probe: { height: 46, borderRadius: 5 },
+  probe: { borderRadius: 5, padding: 4 },
+  leaf: { height: 26, borderRadius: 3, backgroundColor: '#7A4412' },
 
   scoreRow: { flexDirection: 'row', gap: 8 },
   score: {

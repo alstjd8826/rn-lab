@@ -21,7 +21,16 @@ import {
  * 0.86 은 그걸 쓰면 런타임 경고를 낸다. 루트 export 가 이미 있으니 그쪽을 쓴다.
  */
 type ProbeEvent = Readonly<{
-  /** 루트까지 올라가며 센 실제 네이티브 뷰 개수 */
+  /**
+   * 자기 안에 실제로 만들어진 네이티브 뷰 개수(재귀).
+   * 이게 "이 JSX 가 뷰를 몇 개 만들었나" 를 보는 진짜 지표다.
+   */
+  subtreeCount: CodegenTypes.Int32
+  /**
+   * 루트까지 올라가며 센 조상 뷰 개수.
+   * 주의: 이건 실제 뷰 개수가 아니라 **스택 컨텍스트** 개수에 가깝다.
+   * 배경만 있는 뷰는 만들어지되 자식을 담지 않아 조상에 안 잡힌다.
+   */
   depth: CodegenTypes.Int32
   /** 네이티브가 측정한 크기 */
   width: CodegenTypes.Double

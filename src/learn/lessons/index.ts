@@ -2,21 +2,14 @@ import type { Lesson } from '../types'
 import { lesson01 } from './01-jsi'
 import { lesson02 } from './02-fabric'
 import { lesson03 } from './03-turbomodules'
+import { lesson04 } from './04-codegen'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
   lesson01,
   lesson02,
   lesson03,
-  {
-    no: '④',
-    slug: 'codegen',
-    title: 'Codegen',
-    summary: 'TS 한 장으로 C++ · Swift · Kotlin 계약을 자동 생성',
-    comingUp:
-      '①에서 손으로 적은 __jsiLab 타입과, 생성기가 만든 계약을 나란히 놓고 비교합니다. ' +
-      '일부러 타입을 틀리게 써서 빌드가 막히는 것까지 봅니다.',
-  },
+  lesson04,
   {
     no: '⑤',
     slug: 'strict-ts',

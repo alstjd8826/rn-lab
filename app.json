@@ -35,6 +35,9 @@
         "course": "RN 새 구조 익히기",
         "lessons": 10
       }
+    },
+    "experiments": {
+      "reactCompiler": true
     }
   }
 }

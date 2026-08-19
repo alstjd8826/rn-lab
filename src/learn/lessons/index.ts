@@ -8,6 +8,7 @@ import { lesson06 } from './06-hermes'
 import { lesson07 } from './07-expo'
 import { lesson08 } from './08-nitro'
 import { lesson09 } from './09-perf'
+import { lesson10 } from './10-react-compiler'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
@@ -20,13 +21,5 @@ export const LESSONS: Lesson[] = [
   lesson07,
   lesson08,
   lesson09,
-  {
-    no: '⑩',
-    slug: 'react-compiler',
-    title: 'React Compiler',
-    summary: 'useMemo 를 컴파일러가 대신 발라준다 — 조용히 실패하는 함정까지',
-    comingUp:
-      'Expo 설정으로 켜고, healthcheck 로 커버리지를 보고, 규칙을 어긴 컴포넌트가 ' +
-      '어떻게 조용히 스킵되는지 확인합니다.',
-  },
+  lesson10,
 ]

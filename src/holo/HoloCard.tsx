@@ -100,7 +100,13 @@ export default function HoloCard({
   const texAW = texA?.width() ?? 1;
   const texAH = texA?.height() ?? 1;
   const fb = foilBrightness(card.types);
-  const isStage = card.subtypes.join(" ").toLowerCase().startsWith("stage");
+  // 클립 종류: 0 = 그림창, 1 = 진화(stage), 2 = 트레이너(supporter/item/stadium)
+  const sub = card.subtypes.join(" ").toLowerCase();
+  const clipKind = sub.startsWith("stage")
+    ? 1
+    : /supporter|item|stadium/.test(sub) || card.supertype === "Trainer"
+      ? 2
+      : 0;
 
   const uniforms = useDerivedValue(() => {
     const cx = px.value * 100 - 50;
@@ -116,7 +122,7 @@ export default function HoloCard({
       pft: py.value,
       hasFoil: hasFoil ? 1 : 0,
       foilBright: fb,
-      stage: isStage ? 1 : 0,
+      stage: clipKind,
       texASize: [texAW, texAH],
     };
   });

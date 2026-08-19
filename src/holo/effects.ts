@@ -19,9 +19,19 @@ import type { EffectKey } from './cards'
 const CLIP_HELPERS = `
 // inset(9.85% 8% 52.85% 8%) = 카드 그림창.
 // Stage 카드는 왼쪽 위가 진화칸에 가려 계단으로 깎인다(--clip-stage).
+// stage uniform 이 클립 종류를 고른다.
+//  0 = --clip           inset(9.85% 8% 52.85% 8%)
+//  1 = --clip-stage     진화칸에 왼쪽 위가 계단으로 깎인다
+//  2 = --clip-trainer   inset(14.5% 8.5% 48.2% 8.5%)
 float hxArtMask(float2 uv) {
   float x = uv.x * 100.0;
   float y = uv.y * 100.0;
+  float e = 0.25;
+  if (stage > 1.5) {
+    float mx = smoothstep(8.5 - e, 8.5 + e, x) * (1.0 - smoothstep(91.5 - e, 91.5 + e, x));
+    float my = smoothstep(14.5 - e, 14.5 + e, y) * (1.0 - smoothstep(51.8 - e, 51.8 + e, y));
+    return mx * my;
+  }
   float top = 9.85;
   if (stage > 0.5) {
     top = 16.0;
@@ -29,7 +39,6 @@ float hxArtMask(float2 uv) {
     top = mix(top, 12.0, clamp((x - 16.0) / 1.0, 0.0, 1.0));
     top = mix(top, 9.85, clamp((x - 54.0) / 3.0, 0.0, 1.0));
   }
-  float e = 0.25;
   float mx = smoothstep(8.0 - e, 8.0 + e, x) * (1.0 - smoothstep(92.0 - e, 92.0 + e, x));
   float my = smoothstep(top - e, top + e, y) * (1.0 - smoothstep(47.15 - e, 47.15 + e, y));
   return mx * my;
@@ -1188,6 +1197,95 @@ const SECRET_RARE = secretRare(
     ' : czSaturate(czContrast(czBright(r.rgb, pfc * 0.3 + 0.2), 2.0), 0.75)'
 )
 
+// ─────────────────────────────────────────────────────────────
+// cosmos-holo (Rare Holo Cosmos / 갤럭시) — 성단 텍스처 3겹을 각각
+//   같은 82° 무지개와 합성해 쌓는다. 겹마다 포인터 추종 비율이 달라
+//   층이 서로 다른 속도로 움직인다(시차).
+//   원본: public/css/cards/cosmos-holo.css
+// ─────────────────────────────────────────────────────────────
+const COSMOS_HOLO = `
+const float3 CM1 = float3(0.8600, 0.7993, 0.3400); // hsl(53,65%,60%)
+const float3 CM2 = float3(0.4720, 0.7800, 0.2200); // hsl(93,56%,50%)
+const float3 CM3 = float3(0.2254, 0.7546, 0.7193); // hsl(176,54%,49%)
+const float3 CM4 = float3(0.2845, 0.3907, 0.8155); // hsl(228,59%,55%)
+const float3 CM5 = float3(0.6670, 0.2800, 0.8200); // hsl(283,60%,55%)
+const float3 CM6 = float3(0.7991, 0.2209, 0.5485); // hsl(326,59%,51%)
+
+// 스톱 12개가 4% 간격 (팰린드롬: 1,2,3,4,5,6,6,5,4,3,2,1) → 주기 44%
+float3 cmPick(int i) {
+  int k = i - 12 * (i / 12);
+  if (k == 0 || k == 11) { return CM1; }
+  if (k == 1 || k == 10) { return CM2; }
+  if (k == 2 || k == 9)  { return CM3; }
+  if (k == 3 || k == 8)  { return CM4; }
+  if (k == 4 || k == 7)  { return CM5; }
+  return CM6;
+}
+
+float3 cmRamp(float t) {
+  float u = mod((t - 0.04) / 0.44, 1.0) * 11.0;
+  int i = int(floor(min(u, 10.999)));
+  return mix(cmPick(i), cmPick(i + 1), fract(u));
+}
+
+// 82° 무지개 한 겹. size 400% 900%, 위치는 겹마다 다르다.
+float3 cmBand(float2 xy, float base, float span) {
+  float2 sz = float2(4.0, 9.0);
+  float2 pos = float2(base + pfl * span, base + pft * span);
+  float2 q = czBgXY(xy, res, sz, pos);
+  return cmRamp(czLinT(q, res * sz, 82.0));
+}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  // clip-path: var(--clip) 과 마스크가 둘 다 걸린다
+  float m = hxArtMask(uv) * (hasFoil > 0.5 ? float(maskT.eval(xy).a) : 1.0);
+  float t = czRadCircleT(xy, res, pointer * res);
+
+  if (opacity > 0.001 && m > 0.001) {
+    // ── shine ── radial(맨아래) → 무지개(multiply) → cosmos-bottom(color-burn)
+    float4 r = czGrad3(t,
+      float4(0.7800, 1.0000, 1.0000, 0.5), 0.05,
+      float4(0.5098, 0.6302, 0.6302, 0.3), 0.40,
+      float4(0.0000, 0.0000, 0.0000, 1.0), 1.30);
+    r = czComposite(${BLEND.multiply}, r, float4(cmBand(xy, 10.0, 80.0), 1.0));
+    r = czComposite(${BLEND['color-burn']}, r, float4(texA.eval(uv * texASize)));
+    float3 sh = czSaturate(czContrast(czBright(r.rgb, 1.0), 1.0), 0.8);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // ── :before ── cosmos-middle(lighten) + 무기개(multiply) → overlay
+    float4 b = float4(cmBand(xy, 15.0, 70.0), 1.0);
+    b = czComposite(${BLEND.lighten}, b, float4(texB.eval(uv * texASize)));
+    float3 bf = czSaturate(czContrast(czBright(b.rgb, 1.25), 1.75), 0.8);
+    col = czOver(${BLEND.overlay}, col, bf, m * opacity * b.a);
+
+    // ── :after ── cosmos-top(multiply) + 무지개(multiply) → multiply
+    float4 a = float4(cmBand(xy, 20.0, 60.0), 1.0);
+    a = czComposite(${BLEND.multiply}, a, float4(texC.eval(uv * texASize)));
+    float3 af = czSaturate(czContrast(czBright(a.rgb, 1.25), 1.75), 0.8);
+    col = czOver(${BLEND.multiply}, col, af, m * opacity * a.a);
+  }
+
+  // glare — overlay, opacity co*(0.25 + pfc)
+  float go = clamp(opacity * (0.25 + pfc), 0.0, 1.0);
+  if (go > 0.001) {
+    float4 g = czGrad2(t,
+      float4(0.9000, 0.9600, 1.0000, 0.8), 0.05,
+      float4(0.1800, 0.1700, 0.2300, 1.0), 1.50);
+    float3 cg = czSaturate(czContrast(czBright(g.rgb, 0.75), 2.0), 2.0);
+    col = czOver(${BLEND.overlay}, col, cg, g.a * go);
+
+    // glare:after — soft-light, opacity 1 - pft*.75
+    float4 ga = czGrad2(t,
+      float4(0.9733, 0.9200, 1.0000, 1.0), 0.05,
+      float4(0.1000, 0.1000, 0.1000, 1.0), 0.60);
+    float3 caf = czSaturate(czContrast(czBright(ga.rgb, 0.75), 2.5), 2.0);
+    float ao = clamp(1.0 - pft * 0.75, 0.0, 1.0);
+    col = czOver(${BLEND['soft-light']}, col, caf, ga.a * ao * opacity * m);
+  }
+  return col;
+}
+`
+
 /** 효과별로 필요한 텍스처 URL. texA / texB / texC 순서로 바인딩된다. */
 const IMG = 'https://poke-holo.simey.me/img'
 export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
@@ -1200,6 +1298,12 @@ export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
   'tg-vmax': [`${IMG}/glitter.png`],
   'amazing-rare': [`${IMG}/glitter.png`],
   'secret-rare': [`${IMG}/glitter.png`, `${IMG}/geometric.png`],
+  // 세 장 모두 734x1024 로 같아서 texASize 하나로 매핑한다
+  'cosmos-holo': [
+    `${IMG}/cosmos-bottom.png`,
+    `${IMG}/cosmos-middle-trans.png`,
+    `${IMG}/cosmos-top-trans.png`,
+  ],
   'v-max': [`${IMG}/vmaxbg.jpg`],
   'v-star': [`${IMG}/ancient.png`],
 }
@@ -1220,6 +1324,7 @@ const BODIES: Partial<Record<EffectKey, string>> = {
   'tg-vmax': TG_VMAX,
   'amazing-rare': AMAZING_RARE,
   'secret-rare': SECRET_RARE,
+  'cosmos-holo': COSMOS_HOLO,
 }
 
 /** 아직 옮기지 않은 효과. basic 으로 대체하고 화면에 표시한다. */

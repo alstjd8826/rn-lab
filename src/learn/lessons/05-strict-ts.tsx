@@ -95,6 +95,16 @@ export const lesson05: Lesson = {
   title: 'Strict TypeScript API',
   summary: 'RN 타입을 손으로 안 적고 소스에서 생성 — 그리고 뒷문 잠그기',
 
+  sources: [
+    'reactnative.dev/docs/strict-typescript-api — 이 편 내용의 대부분',
+    '  · Flow 로 작성됨 / Generated directly from source',
+    '  · index 파일로 제한 → 내부 경로 변경이 breaking 이 안 됨',
+    '  · 0.80 opt-in → 0.87 기본, opt-out 은 임시',
+    '  · 깨지는 것 5종(딥 임포트 · ref 인스턴스 · CodegenTypes · setup-env · *Static)',
+    'node_modules/react-native/package.json — opt-in 조건명 react-native-strict-api',
+    '※ ViewInstance 가 0.86 생성 타입에 없는 것과 ComponentRef 대체는 이 앱에서 확인',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -115,6 +125,16 @@ export const lesson05: Lesson = {
             '④ Codegen 편에서 본 "세 군데에 손으로 적는" 문제를, RN 팀이 자기 코드에서 똑같이 겪고 있었습니다.',
         },
         {
+          kind: 'code',
+          path: '공식 원문 · docs/strict-typescript-api',
+          code:
+            'React Native is authored in Flow, not TypeScript.\n' +
+            '\n' +
+            'Previously, React Native used separately\n' +
+            'maintained manual types.',
+          highlight: [0, 2, 3],
+        },
+        {
           kind: 'callout',
           tone: 'warn',
           title: '더 큰 문제 — 다들 뒷문으로 들어갔다',
@@ -123,6 +143,18 @@ export const lesson05: Lesson = {
             '`react-native/Libraries/Utilities/codegenNativeComponent` 같은 것들이요. ' +
             '이게 퍼지면서 **RN 팀이 내부를 못 고치게** 됐습니다. 파일 하나 옮기면 ' +
             '전 세계 앱이 깨지니까요. 내부 구현일 뿐인데 사실상 공개 API 가 돼버린 겁니다.',
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · docs/strict-typescript-api',
+          code:
+            'The API is restricted to `react-native`\'s index\n' +
+            'file. This is a tighter and more intentional\n' +
+            'public API contract. It also ensures that\n' +
+            'internal file path changes in React Native\'s\n' +
+            'source code won\'t be breaking.',
+          highlight: [2, 3, 4],
+          caption: '마지막 두 줄이 "왜 잠갔는가" 에 대한 공식 답입니다.',
         },
       ],
     },
@@ -137,7 +169,9 @@ export const lesson05: Lesson = {
           title: '정의',
           text:
             '**① 타입을 소스에서 생성**하고, **② 공개 진입점에서 내보낸 것만 타입을 제공**합니다.\n' +
-            '뒷문을 잠근 것입니다.',
+            '뒷문을 잠근 것입니다.\n\n' +
+            '문서 표현으로는 — "**Generated directly from source.** ... Generating from source ' +
+            'now means we improve coverage, correctness, and compatibility guarantees."',
         },
         {
           kind: 'prose',

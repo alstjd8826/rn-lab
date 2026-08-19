@@ -30,7 +30,7 @@ export default function HoloGallery() {
   const { width: screenW } = useWindowDimensions();
   const CARD_W = Math.min(300, screenW - 60);
   const sections = useMemo(() => group(), []);
-  const [si, setSi] = useState(4); // 기본값
+  const [si, setSi] = useState(3); // 기본값
   const sec = sections[si];
 
   const doneCount = CARDS.filter((c) => isPorted(c.effect)).length;

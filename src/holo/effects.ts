@@ -1286,6 +1286,147 @@ float3 hxEffect(float3 col, float2 xy, float2 uv) {
 }
 `
 
+// ─────────────────────────────────────────────────────────────
+// shiny-rare / shiny-v (샤이니 볼트) — shine 은 v-full-art 와 완전히 같다.
+//   원본 CSS 를 diff 해보면 다른 건 clip-path 와 glare 뿐이다.
+//   원본: public/css/cards/shiny-rare.css, shiny-v.css
+// ─────────────────────────────────────────────────────────────
+const shinyFamily = (useClip: boolean, glare: string) => `
+${SUNPILLAR}
+${VFA_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  ${useClip ? 'm = m * hxArtMask(uv);  // clip-path: var(--clip) / var(--clip-stage)' : ''}
+
+  if (opacity > 0.001 && m > 0.001) {
+    float4 sh4 = vfaShineBg(xy, 0);
+    float3 sh = hasFoil > 0.5
+      ? czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.4 + 0.4), 1.4), 2.25)
+      : czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.3 + 0.35), 2.0), 1.5);
+
+    // :before — 포인터 흰 점, overlay, opacity .75
+    float4 gb = czGrad2(czRadCircleT(xy, res, pointer * res),
+      float4(1.0, 1.0, 1.0, 1.0), 0.00,
+      float4(0.0, 0.0, 0.0, 0.0), 0.40);
+    sh = czOver(${BLEND.overlay}, sh, gb.rgb, gb.a * 0.75);
+
+    float4 sa4 = vfaShineBg(xy, 1);
+    float3 sa = hasFoil > 0.5
+      ? czSaturate(czContrast(czBright(sa4.rgb, pfc * 0.4 + 0.8), 1.5), 1.25)
+      : czSaturate(czContrast(czBright(sa4.rgb, pfc * 0.4 + 0.5), 1.4), 1.2);
+    // 마스크 없을 때는 :after 가 difference 로 바뀐다
+    int afterBlend = hasFoil > 0.5 ? ${BLEND.exclusion} : ${BLEND.difference};
+    sh = czOver(afterBlend, sh, sa, sa4.a);
+
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * sh4.a);
+  }
+${glare}
+  return col;
+}
+`
+
+// shiny-rare: multiply, cover, opacity co*pfc
+const SHINY_RARE = shinyFamily(
+  true,
+  `
+  float go = clamp(opacity * pfc, 0.0, 1.0);
+  if (go > 0.001) {
+    float4 g = czGrad2(czRadCircleT(xy, res, pointer * res),
+      float4(1.0000, 1.0000, 1.0000, 1.0), 0.00,
+      float4(0.1575, 0.1425, 0.1525, 1.0), 1.50);
+    float3 cg = czSaturate(czContrast(czBright(g.rgb, 1.2), 1.0), 0.7);
+    col = czOver(${BLEND.multiply}, col, cg, g.a * go);
+  }`
+)
+
+// shiny-v: darken, size 120% 140%, opacity co*pfc*.75
+const SHINY_V = shinyFamily(
+  false,
+  `
+  float go = clamp(opacity * pfc * 0.75, 0.0, 1.0);
+  if (go > 0.001) {
+    float2 sg = float2(1.2, 1.4);
+    float2 qg = czBgXY(xy, res, sg, float2(50.0));
+    float2 gbox = res * sg;
+    float4 g = czGrad3(czRadCircleT(qg, gbox, pointer * gbox),
+      float4(0.9000, 0.9000, 0.9000, 1.0), 0.05,
+      float4(0.4275, 0.4575, 0.4725, 1.0), 0.80,
+      float4(0.1400, 0.0600, 0.1133, 1.0), 1.50);
+    float3 cg = czSaturate(czContrast(czBright(g.rgb, 0.88), 2.25), 0.7);
+    col = czOver(${BLEND.darken}, col, cg, g.a * go);
+  }`
+)
+
+// ─────────────────────────────────────────────────────────────
+// swsh-pikachu (쇼케이스 피카츄 swsh12pt5-160) — 카드 한 장 전용 규칙.
+//   rainbow-holo 와 레이어는 같고, glitter 를 포인터에 따라 ±1px 어긋나게
+//   깔아 미세하게 반짝이며, 필터가 더 밝다.
+//   원본: public/css/cards/swsh-pikachu.css
+// ─────────────────────────────────────────────────────────────
+const SWSH_PIKACHU = `
+${RAINBOW_COMMON}
+
+// glitter 를 px 단위로 미세 이동시켜 깐다 (--shift: 1px)
+float4 pkGlitter(float2 xy, float sign) {
+  float2 tile = res * 0.25;
+  float2 q = xy - 0.5 * (res - tile)
+           - (float2(1.0) - 2.0 * float2(pfl, pft)) * sign;
+  return float4(texA.eval(fract(q / tile) * texASize));
+}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  float t = czRadCircleT(xy, res, pointer * res);
+
+  if (opacity > 0.001) {
+    // ③ -30° 무지개 → ② glitter(soft-light) → ① -45° 2색(luminosity)
+    float2 s3 = float2(4.0);
+    float2 p3 = float2(25.0 + pointer.x * 50.0, 25.0 + pointer.y * 50.0);
+    float2 q3 = czBgXY(xy, res, s3, p3);
+    float4 r = float4(rcRamp(czLinT(q3, res * s3, -30.0)), 1.0);
+    r = czComposite(${BLEND['soft-light']}, r, pkGlitter(xy, 1.0));
+    float2 s1 = float2(2.0);
+    float2 p1 = float2(25.0 + 50.0 * pfl, 25.0 + 50.0 * pft);
+    float2 q1 = czBgXY(xy, res, s1, p1);
+    float4 g1 = czGrad2(czLinT(q1, res * s1, -45.0),
+      float4(RC1, 1.0), 0.0, float4(RC4, 1.0), 1.0);
+    r = czComposite(${BLEND.luminosity}, r, g1);
+
+    float3 sh = czSaturate(czContrast(czBright(r.rgb, pfc * 0.5 + 0.75), 2.0), 1.0);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // :before — 포일(또는 illusion-mask) darken
+    float4 fb = hasFoil > 0.5
+      ? float4(foilT.eval(xy))
+      : float4(texB.eval(fract(xy / (res * 0.33)) * texASize));
+    float3 fbc = czContrast(czBright(fb.rgb, 2.5), 1.0);
+    col = czOver(${BLEND.darken}, col, fbc,
+      clamp((pfc + 0.4) * 0.6, 0.0, 1.0) * opacity);
+
+    // :after — glitter 를 반대쪽으로 1px 밀고 -60° 램프, color-dodge
+    float2 s4 = float2(4.0);
+    float2 q4 = czBgXY(xy, res, s4, pointer * 100.0);
+    float4 ra = float4(rcRamp(czLinT(q4, res * s4, -60.0)), 1.0);
+    ra = czComposite(${BLEND['soft-light']}, ra, pkGlitter(xy, -1.0));
+    float3 sa = czSaturate(czContrast(czBright(ra.rgb, pfc * 0.3 + 0.55), 2.0), 1.0);
+    col = czOver(${BLEND['color-dodge']}, col, sa, opacity * ra.a);
+  }
+
+  // glare — rainbow-holo 와 같다
+  float go = clamp(pfc * 0.9, 0.0, 1.0) * opacity;
+  if (go > 0.001) {
+    float4 g = czGrad3(t,
+      float4(0.8000, 0.8000, 0.8000, 1.00), 0.00,
+      float4(0.8350, 0.8615, 0.8650, 0.25), 0.30,
+      float4(0.2350, 0.2565, 0.2650, 1.00), 1.20);
+    float3 cg = czContrast(czBright(g.rgb, 0.9), 1.75);
+    col = czOver(${BLEND['hard-light']}, col, cg, g.a * go);
+  }
+  return col;
+}
+`
+
 /** 효과별로 필요한 텍스처 URL. texA / texB / texC 순서로 바인딩된다. */
 const IMG = 'https://poke-holo.simey.me/img'
 export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
@@ -1299,6 +1440,9 @@ export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
   'amazing-rare': [`${IMG}/glitter.png`],
   'secret-rare': [`${IMG}/glitter.png`, `${IMG}/geometric.png`],
   // 세 장 모두 734x1024 로 같아서 texASize 하나로 매핑한다
+  'shiny-rare': [`${IMG}/illusion.png`],
+  'swsh-pikachu': [`${IMG}/glitter.png`, `${IMG}/illusion-mask.png`],
+  'shiny-v': [`${IMG}/illusion.png`],
   'cosmos-holo': [
     `${IMG}/cosmos-bottom.png`,
     `${IMG}/cosmos-middle-trans.png`,
@@ -1325,6 +1469,9 @@ const BODIES: Partial<Record<EffectKey, string>> = {
   'amazing-rare': AMAZING_RARE,
   'secret-rare': SECRET_RARE,
   'cosmos-holo': COSMOS_HOLO,
+  'shiny-rare': SHINY_RARE,
+  'shiny-v': SHINY_V,
+  'swsh-pikachu': SWSH_PIKACHU,
 }
 
 /** 아직 옮기지 않은 효과. basic 으로 대체하고 화면에 표시한다. */

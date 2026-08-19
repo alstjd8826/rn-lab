@@ -1,5 +1,11 @@
 import { StatusBar } from 'expo-status-bar'
-import { useState, type ComponentType } from 'react'
+import {
+  useCallback,
+  useRef,
+  useState,
+  type ComponentRef,
+  type ComponentType,
+} from 'react'
 import {
   Pressable,
   ScrollView,
@@ -16,6 +22,7 @@ import GestureDemo from './src/GestureDemo'
 import GpuPingPongTest from './src/GpuPingPongTest'
 import LayoutTransitionDemo from './src/LayoutTransitionDemo'
 import LearnHome from './src/learn/LearnHome'
+import { ScrollToTopContext } from './src/learn/scrollContext'
 import NitroLabDemo from './src/NitroLabDemo'
 import ReanimatedDemo from './src/ReanimatedDemo'
 import RippleReanimatedDemo from './src/RippleReanimatedDemo'
@@ -41,6 +48,13 @@ export default function App() {
   const [active, setActive] = useState<number | null>(null)
   const current = active === null ? null : DEMOS[active]
 
+  // 데모 슬롯의 ScrollView 는 화면이 바뀌어도 재사용된다.
+  // 안쪽에서 화면을 전환할 때(예: 학습 목차 → 레슨) 스크롤을 올릴 수 있게 내려준다.
+  const demoScroll = useRef<ComponentRef<typeof ScrollView> | null>(null)
+  const scrollToTop = useCallback(() => {
+    demoScroll.current?.scrollTo({ y: 0, animated: false })
+  }, [])
+
   return (
     <GestureHandlerRootView style={styles.root}>
       {current === null ? (
@@ -62,6 +76,7 @@ export default function App() {
         </ScrollView>
       ) : (
         <ScrollView
+          ref={demoScroll}
           style={styles.root}
           contentContainerStyle={styles.demo}
           keyboardShouldPersistTaps="handled"
@@ -69,7 +84,9 @@ export default function App() {
           <Pressable style={styles.back} onPress={() => setActive(null)}>
             <Text style={styles.backText}>← 목록</Text>
           </Pressable>
-          <current.Component />
+          <ScrollToTopContext.Provider value={scrollToTop}>
+            <current.Component />
+          </ScrollToTopContext.Provider>
         </ScrollView>
       )}
       <StatusBar style="auto" />

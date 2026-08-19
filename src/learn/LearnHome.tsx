@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { LESSONS } from './lessons'
 import { LessonView } from './LessonView'
+import { useScrollToTop } from './scrollContext'
 import { C, MONO } from './theme'
 
 // RN 학습 교재. 목차 → 레슨 본문.
@@ -10,6 +11,12 @@ export default function LearnHome() {
   const [slug, setSlug] = useState<string | null>(null)
   const lesson = LESSONS.find((l) => l.slug === slug) ?? null
   const back = useCallback(() => setSlug(null), [])
+  const scrollToTop = useScrollToTop()
+
+  // 목차 → 레슨, 레슨 → 목차 모두 맨 위에서 시작해야 한다.
+  useEffect(() => {
+    scrollToTop()
+  }, [slug, scrollToTop])
 
   if (lesson) return <LessonView lesson={lesson} onBack={back} />
 

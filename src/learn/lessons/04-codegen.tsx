@@ -126,6 +126,15 @@ export const lesson04: Lesson = {
   title: 'Codegen',
   summary: 'TypeScript 한 장에서 C++ · ObjC · Java 계약을 자동 생성',
 
+  sources: [
+    'reactnative.dev/docs/the-new-architecture/what-is-codegen — 정의, 빌드 타임 실행, 필수 아님',
+    'reactnative.dev/docs/the-new-architecture/using-codegen — 파일명 규칙, codegenConfig, 출력 위치',
+    'reactnative.dev/docs/appendix — Codegen Typings 지원 타입 표',
+    'reactnative.dev/docs/the-new-architecture/pure-cxx-modules — 순수 C++ 모듈 배선',
+    '※ "안 되는 타입" 목록과 "생성물 커밋 금지" 는 문서 명시 아님. 경험·관례',
+    '※ static_assert · no member 에러는 이 앱에서 일부러 어겨 얻은 실측',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -174,6 +183,17 @@ export const lesson04: Lesson = {
           text:
             'Codegen 은 **TypeScript 스펙 하나를 읽어서 C++ · ObjC · Java 계약 코드를 ' +
             '빌드 타임에 뽑아내는 코드 생성기**입니다.',
+        },
+        {
+          kind: 'callout',
+          tone: 'info',
+          title: '문서가 짚는 뉘앙스',
+          text:
+            '공식 문서는 **"Using Codegen is not mandatory: you can write all the generated ' +
+            'code manually"** 라고 말합니다. 손으로 다 쓸 수도 있다는 뜻입니다.\n\n' +
+            '즉 계약을 강제하는 건 *생성된 코드*이고, Codegen 은 그걸 **자동으로 만들어주는 ' +
+            '수고 절감 도구**입니다. 현실적으로 손으로 쓸 사람은 없으니 사실상 필수지만, ' +
+            '역할은 정확히 구분해두는 게 좋습니다.',
         },
         {
           kind: 'prose',
@@ -248,6 +268,18 @@ export const lesson04: Lesson = {
             '만든 물건인데 구멍을 하나 뚫어주면 다들 그리로 갑니다.',
         },
         {
+          kind: 'callout',
+          tone: 'warn',
+          title: '위 목록의 출처',
+          text:
+            '**되는 것**은 공식 문서(`docs/appendix` 의 Codegen Typings 표)에 ' +
+            'Flow · TypeScript · Java · ObjC 대응이 정리돼 있습니다. ' +
+            '문서는 Object 대신 **Object literal 사용을 권장**합니다.\n\n' +
+            '**안 되는 것** 목록은 그 표에 명시된 게 아니라 **경험에서 정리한 것**입니다. ' +
+            '다만 2단 상속 실패(`Failed to find definition for "ViewProps"`)는 ' +
+            '②에서 실제로 겪었습니다.',
+        },
+        {
           kind: 'prose',
           text:
             '파일 이름 규칙도 있습니다. 안 지키면 **Codegen 이 그냥 못 본 척합니다.** ' +
@@ -261,6 +293,17 @@ export const lesson04: Lesson = {
             { label: '모듈', left: 'TurboModule', right: 'Native*.ts' },
             { label: '뷰', left: 'Fabric 컴포넌트', right: '*NativeComponent.ts' },
           ],
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · docs/the-new-architecture/using-codegen',
+          code:
+            'Turbo Native Modules require that the spec files\n' +
+            'are prefixed with `Native`.\n' +
+            '\n' +
+            'Native Fabric Components require that the spec\n' +
+            'files are suffixed with `NativeComponent`.',
+          highlight: [1, 4],
         },
         {
           kind: 'callout',
@@ -328,7 +371,10 @@ export const lesson04: Lesson = {
           title: '생성물은 커밋하지 않는다',
           text:
             '빌드 산출물입니다. 커밋해두면 스펙과 어긋난 채로 굳어서 더 골치 아파집니다. ' +
-            '이 앱에서는 `ios/` 전체가 `.gitignore` 에 있습니다.',
+            '이 앱에서는 `ios/` 전체가 `.gitignore` 에 있습니다.\n\n' +
+            '다만 **공식 문서가 커밋 여부를 명시하진 않습니다.** 출력 위치만 안내합니다 ' +
+            '(iOS 는 `ios/build`, Android 는 `app/build/generated/source/codegen`). ' +
+            '이건 관례이자 이 프로젝트의 선택입니다.',
         },
       ],
     },

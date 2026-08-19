@@ -193,6 +193,16 @@ export const lesson02: Lesson = {
   title: 'Fabric',
   summary: '화면을 그리는 새 방식. 왜 트리를 불변으로 만들어야 했나',
 
+  sources: [
+    'reactnative.dev/architecture/fabric-renderer — 동기 측정·layout jump, Shared C++ core',
+    'reactnative.dev/architecture/render-pipeline — Render/Commit/Mount, 불변성, 구조적 공유',
+    'reactnative.dev/architecture/threading-model — 스레드 분담 (레이아웃 스레드는 문서간 상충)',
+    'reactnative.dev/architecture/view-flattening — 플래트닝 존재만 언급, 정확한 규칙 없음',
+    'reactnative.dev/architecture/landing-page — useLayoutEffect 동기 측정, 동시성 기능',
+    'reactnative.dev/docs/fabric-native-components-ios — 컴포넌트 배선',
+    '※ "뷰 생성 조건 vs 스택 컨텍스트 조건" 구분은 관측 기반 해석 (문서 근거 없음)',
+  ],
+
   chapters: [
     // ── 1장
     {
@@ -219,9 +229,10 @@ export const lesson02: Lesson = {
           kind: 'prose',
           text:
             '옛 렌더러의 문제가 두 가지였습니다.\n\n' +
-            '**첫째, 섀도우 트리가 iOS 용 · Android 용으로 각각 따로 있었습니다.** ' +
-            '같은 개념을 두 번 만든 셈이라, 레이아웃이 두 플랫폼에서 미묘하게 다르게 나오는 ' +
-            '버그가 주기적으로 나왔습니다.',
+            '**첫째, 렌더 로직이 플랫폼별로 흩어져 있었습니다.** ' +
+            '공식 문서는 Fabric 의 원칙을 "unify **more** render logic in C++" 라고 표현하는데, ' +
+            '뒤집어 말하면 그전에는 통합돼 있지 않았다는 뜻입니다. ' +
+            '같은 개념을 두 번 만들면 두 플랫폼의 동작이 미묘하게 갈립니다.',
         },
         {
           kind: 'prose',
@@ -230,6 +241,16 @@ export const lesson02: Lesson = {
             '요즘 React 는 “급한 일이 생기면 그리던 걸 중단하고 버리는” 기능이 있습니다. ' +
             '그런데 트리를 이미 절반쯤 덮어써 놨다면 — **되돌릴 방법이 없습니다.** ' +
             '그래서 Suspense 같은 기능이 RN 에서 반쪽짜리였습니다.',
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · architecture/fabric-renderer',
+          code:
+            'In the legacy architecture, React Native layout\n' +
+            'was asynchronous which led to a layout "jump"\n' +
+            'issue when embedding a React Native rendered\n' +
+            'view in a host view.',
+          highlight: [1, 2],
         },
         {
           kind: 'prose',
@@ -261,6 +282,18 @@ export const lesson02: Lesson = {
             '레이아웃 계산이 하나라서 플랫폼별 차이가 구조적으로 사라집니다.',
         },
         {
+          kind: 'code',
+          path: '공식 원문 · architecture/fabric-renderer',
+          code:
+            'Shared C++ core: the renderer is implemented in\n' +
+            'C++ and the core is shared among platforms.\n' +
+            'This increases consistency and makes it easier\n' +
+            'to adopt React Native on new platforms.',
+          highlight: [0, 1],
+          caption:
+            '마지막 문장이 ⑪ 플랫폼 확장으로 이어지는 대목입니다 (이 교재에서는 다루지 않습니다).',
+        },
+        {
           kind: 'prose',
           text:
             '**불변으로 만든 이유** — 이게 핵심입니다. 노드를 고치는 대신 ' +
@@ -283,6 +316,8 @@ export const lesson02: Lesson = {
           tone: 'info',
           title: '불변이면 뭐가 좋은가',
           text:
+            '공식 문서는 트리가 불변이라는 것과 동시성 기능을 지원한다는 것을 각각 말하지만, ' +
+            '**둘을 잇는 인과는 아래 해석**입니다.\n\n' +
             '“지금 화면에 떠 있는 트리” 와 “지금 만들고 있는 트리” 가 **동시에 존재**할 수 있습니다. ' +
             '그러니 만들던 걸 언제든 버려도 화면은 멀쩡합니다. 중단·재개·우선순위 처리가 ' +
             '전부 여기서 가능해집니다.',

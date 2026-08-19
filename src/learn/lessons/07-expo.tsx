@@ -98,6 +98,14 @@ export const lesson07: Lesson = {
   title: 'Expo',
   summary: '네이티브 폴더를 산출물로 취급해 업그레이드 고통을 없앤 방식',
 
+  sources: [
+    'docs.expo.dev/workflow/continuous-native-generation — CNG 정의, gitignore, 수동 수정 경고',
+    'docs.expo.dev/config-plugins/introduction — config plugin 정의와 목적',
+    'results.stateofreactnative.com — New architecture 80% (직접 확인한 유일한 수치)',
+    '이 앱 실측 — plist 전후 대조, prebuild --clean 후 로컬 모듈 4개 배선 유지',
+    '※ "신규 프로젝트 70% 이상이 Expo" 는 틀린 서술이었다. 본문에서 제거하고 정정을 남김',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -180,7 +188,10 @@ export const lesson07: Lesson = {
               side: 'gen',
               text:
                 '`ios/`·`android/` 를 **빌드 산출물로 취급**합니다. git 에 안 넣습니다. ' +
-                '설정이 바뀌면 버리고 다시 생성합니다.',
+                '설정이 바뀌면 버리고 다시 생성합니다.\n\n' +
+                '공식 정의로는 — 개발자가 **"maintaining customizations to those native ' +
+                'projects for the lifetime of the codebase"** 대신 **"only the definition ' +
+                'of their customizations"** 만 관리하게 된다는 것입니다.',
               code: '$ npx expo prebuild --clean -p ios',
             },
             {
@@ -231,6 +242,17 @@ export const lesson07: Lesson = {
             '**정확히 뒤집혔습니다.** 손으로 고친 건 사라지고, 코드로 선언한 건 복원됐습니다.\n\n' +
             '이게 CNG 의 전부입니다 — 네이티브 폴더는 언제든 버려도 되는 산출물이고, ' +
             '진짜 소스는 `app.json` 과 config plugin 입니다.',
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · docs.expo.dev/workflow/continuous-native-generation',
+          code:
+            'If you modify the generated directories manually\n' +
+            'then you risk losing your changes the next time\n' +
+            'you run `npx expo prebuild --clean`.',
+          highlight: [0, 1, 2],
+          caption:
+            '위 실험은 이 문장을 그대로 재현한 것입니다. 문서가 경고하는 그대로 사라졌습니다.',
         },
         {
           kind: 'callout',
@@ -313,8 +335,19 @@ export const lesson07: Lesson = {
           text:
             '한계도 있습니다. config plugin 으로 표현하기 어려운 특이한 빌드 커스터마이징, ' +
             '이미 거대한 네이티브 앱에 RN 을 얹는 경우(brownfield), EAS 클라우드 빌드 비용 등. ' +
-            'CNG 를 포기하고 네이티브 폴더를 커밋하는 절충안도 선택할 수 있습니다.\n\n' +
-            '다만 신규 RN 프로젝트의 **70% 이상**이 Expo 인 데는 이유가 있습니다.',
+            'CNG 를 포기하고 네이티브 폴더를 커밋하는 절충안도 선택할 수 있습니다.',
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
+          title: '이 자리에 틀린 통계가 있었습니다',
+          text:
+            '원래 여기에 "신규 RN 프로젝트의 70% 이상이 Expo" 라고 적었는데 **틀렸습니다.**\n\n' +
+            'State of React Native 2025 설문 기준으로 Expo 와 순수 React Native 는 ' +
+            '비등한 수준입니다. 71% 라는 숫자는 **Expo Router 의 내비게이션 점유율**이었고, ' +
+            '제가 그걸 Expo 전체로 착각한 것으로 보입니다.\n\n' +
+            '설문 페이지에서 직접 확인한 값은 **"New architecture is at 80% adoption"** 하나뿐이라, ' +
+            '점유율 주장은 아예 뺐습니다.',
         },
         {
           kind: 'prose',

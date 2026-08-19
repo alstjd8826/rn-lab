@@ -75,9 +75,20 @@ export function LessonView({
         </View>
       ))}
 
+      {lesson.sources?.length ? (
+        <View style={s.sources}>
+          <Text style={s.sourcesTitle}>대조한 문서</Text>
+          {lesson.sources.map((src) => (
+            <Text key={src} style={s.sourceItem}>
+              · {src}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
       <View style={s.foot}>
         <Text style={s.footText}>
-          코드는 이 앱 안에 실제로 있습니다 · modules/react-native-jsi-lab
+          코드는 이 앱 안에 실제로 있습니다 · modules/
         </Text>
       </View>
     </View>
@@ -104,6 +115,22 @@ const s = StyleSheet.create({
   },
   blocks: { gap: 15 },
 
-  foot: { marginTop: 34, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.rule },
+  sources: {
+    marginTop: 30,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: C.rule,
+    gap: 3,
+  },
+  sourcesTitle: {
+    fontFamily: MONO,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: C.ink3,
+    marginBottom: 3,
+  },
+  sourceItem: { fontFamily: MONO, fontSize: 10.5, lineHeight: 17, color: C.ink2 },
+
+  foot: { marginTop: 22, paddingTop: 14, borderTopWidth: 1, borderTopColor: C.rule },
   footText: { fontFamily: MONO, fontSize: 10.5, color: C.ink3, lineHeight: 17 },
 })

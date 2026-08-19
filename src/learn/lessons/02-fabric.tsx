@@ -446,7 +446,7 @@ export const lesson02: Lesson = {
               title: 'Commit — 크기를 계산하고 확정한다',
               side: 'native',
               text:
-                '새 트리에 레이아웃을 계산합니다(백그라운드 스레드). ' +
+                '새 트리에 Yoga 로 레이아웃을 계산합니다. ' +
                 '끝나면 “현재 트리” 로 승격시킵니다. **이 승격 직전까지는 언제든 버릴 수 있습니다.** ' +
                 '중단 가능한 렌더링의 정체가 이것입니다.',
             },
@@ -500,11 +500,24 @@ export const lesson02: Lesson = {
         {
           kind: 'callout',
           tone: 'warn',
+          title: '문서끼리 어긋나는 지점',
+          text:
+            '레이아웃 계산이 **어느 스레드에서 도는지**는 공식 문서 두 곳이 다르게 말합니다.\n\n' +
+            '· `architecture/render-pipeline` → "asynchronously on a background thread"\n' +
+            '· `architecture/threading-model` → "render phase, as well as layout" 이 JS 스레드\n\n' +
+            '스레드 모델 문서가 더 구체적이지만, 여기서는 단정하지 않겠습니다. ' +
+            '중요한 건 **커밋 전까지 버릴 수 있다**는 성질이고 그건 어느 쪽이든 같습니다.',
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
           title: '처음에 틀렸던 것',
           text:
             '이 실험을 원래 **조상 수를 세는** 방식으로 만들었는데, A 와 B 가 똑같이 10 이 나왔습니다. ' +
             '조상 수는 실제 뷰 개수가 아니었기 때문입니다.\n\n' +
-            'Fabric 은 조건을 **두 가지로 따로** 봅니다 — “실제 뷰가 필요한가(배경·테두리·그림자)” 와 ' +
+            '아래는 **관측에서 끌어낸 해석**입니다. 공식 문서(`architecture/view-flattening`)는 ' +
+            '"margin·padding·backgroundColor·opacity 등을 고려한다" 고만 하고 정확한 규칙을 밝히지 않습니다.\n\n' +
+            'Fabric 은 조건을 **두 가지로 따로** 보는 것으로 보입니다 — “실제 뷰가 필요한가(배경·테두리·그림자)” 와 ' +
             '“자식을 자기 안에 담아야 하는가(overflow·opacity·transform 등, 스택 컨텍스트)”. ' +
             '**배경색은 앞의 조건만 만족**시킵니다. 그래서 배경 뷰는 만들어지되 자식들은 위로 끌어올려져 ' +
             '형제로 붙습니다. 조상 체인에 안 잡히는 이유입니다.',

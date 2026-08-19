@@ -137,6 +137,14 @@ export const lesson01: Lesson = {
   title: 'JSI',
   summary: 'C++ 에서 JavaScript 값을 직접 만지게 해주는 통로',
 
+  sources: [
+    'reactnative.dev/architecture/landing-page — JSI 정의, 직렬화 비용 제거',
+    'reactnative.dev/architecture/glossary — JSI 용어 정의',
+    'reactnative.dev/blog/2018/06/14/state-of-react-native-2018 — 브릿지 3요소',
+    'reactnative.dev/docs/the-new-architecture/pure-cxx-modules — 모듈 배선',
+    '※ HostObject · HostFunction 은 공식 용어집에 없다. jsi.h 의 실제 타입명',
+  ],
+
   chapters: [
     // ── 1장: 왜 필요한가
     {
@@ -175,27 +183,40 @@ export const lesson01: Lesson = {
         },
         {
           kind: 'prose',
-          text: '이 방식의 불편함이 세 가지였습니다.',
+          text:
+            '이 설계에는 성질이 셋 있었고, 그게 그대로 한계였습니다. ' +
+            'Meta 가 2018 년에 새 아키텍처를 예고하며 직접 밝힌 내용입니다.',
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · blog/2018-06-14 state-of-react-native-2018',
+          code:
+            'we designed it to have a single "bridge" between\n' +
+            'JavaScript and native that is\n' +
+            '  asynchronous, serializable, and batched',
+          highlight: [2],
         },
         {
           kind: 'steps',
           flavor: 'build',
           steps: [
             {
-              title: '항상 답장을 기다려야 한다',
+              title: '비동기 (asynchronous)',
               text:
-                '편지니까 즉시 답이 안 옵니다. 값 하나 읽는데도 `await` 가 필요했습니다.',
+                '편지니까 즉시 답이 안 옵니다. **동기 응답을 기대하는 네이티브 API 와 ' +
+                '직접 엮을 수가 없습니다.** 값 하나 읽는데도 `await` 가 필요했습니다.',
             },
             {
-              title: '옮겨 적는 비용이 든다',
+              title: '모아서 보냄 (batched)',
               text:
-                'JSON 글자로 바꾸고 다시 해석합니다. 데이터가 클수록, 자주 보낼수록 손해입니다.',
+                '네이티브 호출을 큐에 쌓았다가 한 번에 보냅니다. ' +
+                '그래서 **네이티브로 구현된 함수를 앱이 그때그때 부르기가 어렵습니다.**',
             },
             {
-              title: '큰 짐을 못 보낸다',
+              title: '직렬화 (serializable)',
               text:
-                '사진 한 장이 5MB 라면 그 5MB 를 **글자로 베껴 써서** 보내야 합니다. ' +
-                '초당 30번? 불가능한 요구였습니다.',
+                '두 세계가 메모리를 공유하는 대신 **불필요하게 복사**합니다. ' +
+                '사진 한 장이 5MB 면 그 5MB 를 통째로 옮겨 적어야 합니다. 초당 30번? 불가능했습니다.',
             },
           ],
         },
@@ -213,7 +234,10 @@ export const lesson01: Lesson = {
           title: '정의',
           text:
             'JSI 는 **C++ 에서 JavaScript 값을 직접 만질 수 있게 해주는 타입들의 모음**입니다.\n' +
-            '기능도 아니고, 엔진도 아니고, 최적화도 아닙니다.',
+            '기능도 아니고, 엔진도 아니고, 최적화도 아닙니다.\n\n' +
+            '공식 문서의 표현은 이렇습니다 — "JSI is an interface that allows JavaScript to ' +
+            '**hold a reference to a C++ object and vice-versa.** With a memory reference, ' +
+            'you can directly invoke methods **without serialization costs**."',
         },
         {
           kind: 'prose',

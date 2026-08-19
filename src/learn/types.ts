@@ -80,6 +80,8 @@ export type Lesson = {
   summary: string
   /** 아직 안 만든 레슨은 chapters 없이 둔다 */
   chapters?: Chapter[]
+  /** 이 편을 쓰며 실제로 읽고 대조한 문서. 검증 가능하도록 남긴다 */
+  sources?: string[]
   /** 준비중일 때 보여줄 예고 */
   comingUp?: string
 }

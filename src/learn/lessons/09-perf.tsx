@@ -155,6 +155,15 @@ export const lesson09: Lesson = {
   title: '성능 계측',
   summary: 'JS FPS 와 UI FPS 는 다른 숫자다',
 
+  sources: [
+    'reactnative.dev/docs/performance — "two different frame rates", JS 스레드 미응답 시 dropped frame,',
+    '  네이티브 스레드 애니메이션이 JS 프레임 드롭에 안 끊긴다, useNativeDriver',
+    'firebase.google.com/docs/perf-mon/screen-traces — slow(16ms) · frozen(700ms) 정의',
+    '이 앱 실측 — 평상시 UI 60 / JS 60, blockJsThread 2초 중 UI 60 / JS 0',
+    '※ ANR 5초는 Android 기준이나 1차 출처 미확인',
+    '※ Flashlight · RUM · p95 관련 서술은 일반적인 실무 관행. 문서 인용 아님',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -173,6 +182,18 @@ export const lesson09: Lesson = {
           title: '먼저 알아야 할 것',
           text:
             'RN 앱에는 **FPS 가 두 개**입니다. 하나로 뭉뚱그린 숫자는 원인을 못 가리킵니다.',
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · docs/performance',
+          code:
+            'open up the Dev Menu in your app and toggle\n' +
+            'Show Perf Monitor. You will notice that there\n' +
+            'are two different frame rates.\n' +
+            '\n' +
+            'If the JavaScript thread is unresponsive for a\n' +
+            'frame, it will be considered a dropped frame.',
+          highlight: [1, 2],
         },
         {
           kind: 'compare',
@@ -224,7 +245,10 @@ export const lesson09: Lesson = {
             '실측값입니다 — 평소엔 둘 다 60fps 인데, 막은 2초 동안은 ' +
             '**UI 60 / JS 0** 이 나옵니다. 같은 시간 창인데 숫자가 완전히 다릅니다.\n\n' +
             '여기서 실무 규칙 하나가 나옵니다 — **애니메이션을 UI 스레드로 내려보내면 ' +
-            'JS 가 바빠도 안 끊깁니다.** Reanimated 워클릿이나 `useNativeDriver: true` 가 그것입니다.',
+            'JS 가 바빠도 안 끊깁니다.** Reanimated 워클릿이나 `useNativeDriver: true` 가 그것입니다.\n\n' +
+            '공식 문서도 같은 이야기를 합니다 — 네이티브 스택 내비게이터가 더 부드러운 이유가 ' +
+            '"the transition animations are executed on the native main UI thread, so they are ' +
+            '**not interrupted by frame drops on the JavaScript thread**" 이기 때문이라고요.',
         },
       ],
     },
@@ -245,11 +269,17 @@ export const lesson09: Lesson = {
                 '기준으로 봐야 합니다. ⑥의 Hermes 가 공략한 게 정확히 이 구간입니다.',
             },
             {
-              title: 'Frozen frame — 700ms 이상 멈춘 프레임',
+              title: 'Frozen frame — 700ms 이상 걸린 프레임',
               side: 'none',
               text:
                 '평균 FPS 보다 훨씬 유용합니다. 평균 58fps 인데 화면 전환마다 1초씩 얼어붙는 앱이 ' +
-                '있을 수 있는데, 평균은 그걸 못 잡아냅니다.',
+                '있을 수 있는데, 평균은 그걸 못 잡아냅니다.\n\n' +
+                '이 임계값은 **RN 이 아니라 Firebase Performance Monitoring 의 정의**입니다. ' +
+                'slow frame 은 16ms, frozen frame 은 700ms 를 넘긴 프레임이고, ' +
+                '60Hz 기기를 전제로 합니다.',
+              code:
+                'slow rendering  : 프레임의 50% 초과가 16ms 초과\n' +
+                'frozen frames   : 프레임의 0.1% 초과가 700ms 초과',
             },
             {
               title: 'p95 · p99 — 평균은 문제를 가린다',
@@ -269,8 +299,9 @@ export const lesson09: Lesson = {
               side: 'none',
               text:
                 '저가 기기에서 메모리 압박은 곧 **OS 의 강제 종료**입니다. 크래시 리포트에 ' +
-                '안 잡히는 경우가 많아 놓치기 쉽습니다. Android 의 ANR 은 메인 스레드가 ' +
-                '5초 이상 막힌 것이고 스토어 노출에도 영향을 줍니다.',
+                '안 잡히는 경우가 많아 놓치기 쉽습니다.\n\n' +
+                'Android 의 ANR(메인 스레드 5초 이상 블로킹)도 함께 봅니다. ' +
+                '다만 이 임계값은 Android 플랫폼 기준이고 **이 교재에서 1차 출처를 확인하진 않았습니다.**',
             },
           ],
         },

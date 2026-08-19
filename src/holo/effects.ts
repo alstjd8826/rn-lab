@@ -821,6 +821,290 @@ float3 hxEffect(float3 col, float2 xy, float2 uv) {
 }
 `
 
+// ─────────────────────────────────────────────────────────────
+// 레인보우 계열 공용 — r-clr 7색 램프와 glitter 타일.
+//   원본은 7색을 3번 늘어놓아 스톱 22개를 만든다 (반복 그라디언트가 아니다).
+//   clr-4 와 clr-5 가 같은 색이라 중간에 평평한 구간이 생긴다.
+// ─────────────────────────────────────────────────────────────
+const RAINBOW_COMMON = `
+const float3 RC1 = float3(0.5809, 0.1591, 0.1591); // hsl(0,57%,37%)
+const float3 RC2 = float3(0.5967, 0.4589, 0.1833); // hsl(40,53%,39%)
+const float3 RC3 = float3(0.3500, 0.5600, 0.1400); // hsl(90,60%,35%)
+const float3 RC4 = float3(0.1400, 0.5600, 0.5600); // hsl(180,60%,35%)
+const float3 RC6 = float3(0.1677, 0.3900, 0.6123); // hsl(210,57%,39%)
+const float3 RC7 = float3(0.3668, 0.1395, 0.4805); // hsl(280,55%,31%)
+
+float3 rcPick(int i) {
+  int k = i - 7 * (i / 7);
+  if (k == 0) { return RC1; }
+  if (k == 1) { return RC2; }
+  if (k == 2) { return RC3; }
+  if (k == 3) { return RC4; }
+  if (k == 4) { return RC4; }   // clr-5 는 clr-4 와 같은 색
+  if (k == 5) { return RC6; }
+  return RC7;
+}
+
+// 스톱 22개가 0~100% 에 균등 배치 → 세그먼트 21개
+float3 rcRamp(float t) {
+  float u = clamp(t, 0.0, 1.0) * 21.0;
+  int i = int(floor(min(u, 20.999)));
+  return mix(rcPick(i), rcPick(i + 1), fract(u));
+}
+
+// glitter — background-size: 25% 25%, position 은 효과마다 다르다
+float4 rcGlitter(float2 xy, float2 posPct) {
+  float2 tile = res * 0.25;
+  float2 q = xy - posPct / 100.0 * (res - tile);
+  return float4(texA.eval(fract(q / tile) * texASize));
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// rainbow-holo (Rare Rainbow) — 파스텔 무지개 + 반짝이.
+//   원본: public/css/cards/rainbow-holo.css
+//   :after 와 :before 는 mask-image: none 이라 카드 전체에 뜬다.
+// ─────────────────────────────────────────────────────────────
+const RAINBOW_HOLO = `
+${RAINBOW_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  float2 at = pointer * res;
+
+  if (opacity > 0.001) {
+    // ── shine 본체 (마스크 적용) ──
+    // ③ 맨 아래: -30° 무지개 램프, size 400%, pos (25 + px/2, 25 + py/2)
+    float2 s3 = float2(4.0);
+    float2 p3 = float2(25.0 + pointer.x * 100.0 * 0.5, 25.0 + pointer.y * 100.0 * 0.5);
+    float2 q3 = czBgXY(xy, res, s3, p3);
+    float4 r = float4(rcRamp(czLinT(q3, res * s3, -30.0)), 1.0);
+
+    // ② glitter, center → soft-light
+    r = czComposite(${BLEND['soft-light']}, r, rcGlitter(xy, float2(50.0)));
+
+    // ① -45° 2색, size 200%, pos (25 + 50*pfl, 25 + 50*pft) → luminosity
+    float2 s1 = float2(2.0);
+    float2 p1 = float2(25.0 + 50.0 * pfl, 25.0 + 50.0 * pft);
+    float2 q1 = czBgXY(xy, res, s1, p1);
+    float4 g1 = czGrad2(czLinT(q1, res * s1, -45.0),
+      float4(RC1, 1.0), 0.0, float4(RC4, 1.0), 1.0);
+    r = czComposite(${BLEND.luminosity}, r, g1);
+
+    float3 sh = czSaturate(czContrast(czBright(r.rgb, pfc * 0.25 + 0.6), 2.2), 0.75);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // ── :before — 포일을 darken 으로. 마스크 없음. ──
+    float4 fb = hasFoil > 0.5
+      ? float4(foilT.eval(xy))
+      : float4(texB.eval(fract(xy / (res * 0.33)) * texASize));
+    float3 fbc = czContrast(czBright(fb.rgb, 2.5), 1.0);
+    float fo = clamp((pfc + 0.4) * 0.6, 0.0, 1.0);
+    col = czOver(${BLEND.darken}, col, fbc, fo * opacity);
+
+    // ── :after — glitter + -60° 램프, color-dodge, 마스크 없음 ──
+    float2 s4 = float2(4.0);
+    float2 q4 = czBgXY(xy, res, s4, pointer * 100.0);
+    float4 ra = float4(rcRamp(czLinT(q4, res * s4, -60.0)), 1.0);
+    ra = czComposite(${BLEND['soft-light']}, ra, rcGlitter(xy, float2(50.0)));
+    float3 sa = czSaturate(czContrast(czBright(ra.rgb, pfc * 0.3 + 0.55), 2.0), 1.0);
+    col = czOver(${BLEND['color-dodge']}, col, sa, opacity * ra.a);
+  }
+
+  // glare — hard-light, opacity pfc*0.9
+  float go = clamp(pfc * 0.9, 0.0, 1.0) * opacity;
+  if (go > 0.001) {
+    float4 g = czGrad3(czRadCircleT(xy, res, at),
+      float4(0.8000, 0.8000, 0.8000, 1.00), 0.00,
+      float4(0.8350, 0.8615, 0.8650, 0.25), 0.30,
+      float4(0.2350, 0.2565, 0.2650, 1.00), 1.20);
+    float3 cg = czContrast(czBright(g.rgb, 0.9), 1.75);
+    col = czOver(${BLEND['hard-light']}, col, cg, g.a * go);
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// rainbow-alt (Rare Rainbow Alt / 갤러리 VMAX) — 133° 파스텔 띠 + 무지개 + 반짝이.
+//   원본: public/css/cards/rainbow-alt.css
+// ─────────────────────────────────────────────────────────────
+const rainbowAlt = (glare: string) => `
+${RAINBOW_COMMON}
+
+const float4 RA1 = float4(0.6849, 0.4040, 0.7960, 0.75);
+const float4 RA2 = float4(0.8740, 0.3056, 0.2860, 0.75);
+const float4 RA3 = float4(0.8449, 0.7714, 0.2151, 0.75);
+const float4 RA4 = float4(0.4931, 0.7888, 0.2512, 0.75);
+const float4 RA5 = float4(0.3100, 0.6900, 0.6647, 0.75);
+const float4 RA6 = float4(0.5400, 0.6320, 1.0000, 0.75);
+
+float4 raPick(int i) {
+  int k = i - 6 * (i / 6);
+  if (k == 0) { return RA1; }
+  if (k == 1) { return RA2; }
+  if (k == 2) { return RA3; }
+  if (k == 3) { return RA4; }
+  if (k == 4) { return RA5; }
+  return RA6;
+}
+
+// repeating-linear-gradient(133deg, 5% 간격 7스톱) → 주기 30%
+float4 raBand(float t) {
+  float u = mod((t - 0.05) / 0.30, 1.0) * 6.0;
+  int i = int(floor(u));
+  return mix(raPick(i), raPick(i + 1), fract(u));
+}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+
+  if (opacity > 0.001) {
+    // ③ 맨 아래: -30° 무지개, size 400%, pos (bgx*1.5, bgy*1.5)
+    float2 s3 = float2(4.0);
+    float2 q3 = czBgXY(xy, res, s3, bgp * 1.5);
+    float4 r = float4(rcRamp(czLinT(q3, res * s3, -30.0)), 1.0);
+
+    // ② glitter, center → overlay
+    r = czComposite(${BLEND.overlay}, r, rcGlitter(xy, float2(50.0)));
+
+    // ① 133° 파스텔 띠, size 200% 400%, pos 0% bgy → luminosity
+    float2 s1 = float2(2.0, 4.0);
+    float2 q1 = czBgXY(xy, res, s1, float2(0.0, bgp.y));
+    r = czComposite(${BLEND.luminosity}, r, raBand(czLinT(q1, res * s1, 133.0)));
+
+    float3 sh = czSaturate(czContrast(czBright(r.rgb, pfc * 0.3 + 0.3), 3.0), 1.8);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // :before — 포일을 color-dodge 로. 마스크 없는 카드는 --foil: none.
+    if (hasFoil > 0.5) {
+      float4 fb = float4(foilT.eval(xy));
+      float3 fbc = czContrast(czBright(fb.rgb, 1.5), 1.5);
+      float fo = clamp((pfc + 0.6) * 0.4, 0.0, 1.0);
+      col = czOver(${BLEND['color-dodge']}, col, fbc, fo * opacity);
+    }
+
+    // :after — glitter + -60° 램프, color-dodge, 마스크 없음
+    float2 s4 = float2(4.0);
+    float2 q4 = czBgXY(xy, res, s4, bgp * -1.5);
+    float4 ra = float4(rcRamp(czLinT(q4, res * s4, -60.0)), 1.0);
+    ra = czComposite(${BLEND.overlay}, ra, rcGlitter(xy, float2(50.0)));
+    float3 sa = czSaturate(czContrast(czBright(ra.rgb, pfc * 0.5 + 0.6), 3.0), 1.0);
+    float ao = clamp(1.2 - pfc * 0.5, 0.0, 1.0);
+    col = czOver(${BLEND['color-dodge']}, col, sa, ao * opacity * ra.a);
+  }
+
+${glare}
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// amazing-rare (Amazing Rare) — 반짝이 두 겹을 서로 어긋나게 깔고 color-burn.
+//   원본: public/css/cards/amazing-rare.css
+//   :after 가 sunpillar 를 saturation 으로 얹어 색만 입힌다.
+// ─────────────────────────────────────────────────────────────
+const AMAZING_RARE = `
+${SUNPILLAR}
+${RAINBOW_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  // 마스크 없는 카드는 clip-path: var(--clip) = 그림창
+  float m = hasFoil > 0.5 ? float(maskT.eval(xy).a) : hxArtMask(uv);
+  float2 at = pointer * res;
+  float t = czRadCircleT(xy, res, at);
+
+  if (opacity > 0.001) {
+    // ── shine ── 반짝이 2겹 (40%/45%, 55%/55%) + 포인터 radial
+    float4 r = czGrad3(t,
+      float4(0.0800, 0.1200, 0.1000, 1.00), 0.10,
+      float4(0.7560, 0.8440, 0.8396, 0.10), 0.50,
+      float4(0.9500, 0.9500, 0.9500, 0.98), 0.90);
+    r = czComposite(${BLEND['color-burn']}, r, rcGlitter(xy, float2(55.0, 55.0)));
+    r = czComposite(${BLEND['soft-light']}, r, rcGlitter(xy, float2(40.0, 45.0)));
+    float3 sh = czSaturate(czContrast(czBright(r.rgb, 1.0), 1.0), 0.9);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // ── :before — 포일 + radial 을 color-burn, lighten, opacity .5, 마스크 없음
+    float4 pb = czGrad3(t,
+      float4(0.9200, 0.9133, 0.8800, 0.95), 0.10,
+      float4(0.7098, 0.5451, 0.6431, 0.50), 0.50,
+      float4(0.0000, 0.0000, 0.0000, 1.00), 0.60);
+    float4 fb = hasFoil > 0.5 ? float4(foilT.eval(xy)) : float4(0.0, 0.0, 0.0, 0.0);
+    if (fb.a > 0.001) { pb = czComposite(${BLEND['color-burn']}, pb, fb); }
+    col = czOver(${BLEND.lighten}, col, pb.rgb, pb.a * 0.5 * opacity);
+
+    // ── :after — sunpillar 를 saturation 으로. 색만 입힌다.
+    float2 s4 = float2(4.0, 8.0);
+    float2 p4 = float2(50.0 + (50.0 - bgp.x) * 3.0, 50.0 + (50.0 - bgp.y) * 3.0);
+    float2 q4 = czBgXY(xy, res, s4, p4);
+    float3 sp = spRamp(czLinT(q4, res * s4, 133.0), 5);
+    float3 spf = czBright(sp, clamp(0.75 - pfc * 0.5, 0.0, 1.0));
+    col = czOver(${BLEND.saturation}, col, spf, opacity);
+  }
+
+  // glare — 마스크 있으면 2겹, 없으면 multiply 한 겹
+  if (opacity > 0.001) {
+    if (hasFoil > 0.5) {
+      float4 gb = czGrad3(t,
+        float4(0.9200, 0.9133, 0.8800, 0.45), 0.00,
+        float4(0.2400, 0.3600, 0.3000, 0.45), 0.45,
+        float4(0.0000, 0.0000, 0.0000, 0.90), 1.20);
+      float3 cb = czContrast(czBright(gb.rgb, 0.9), 2.0);
+      float4 ga = czGrad3(t,
+        float4(0.9200, 0.9133, 0.8800, 0.75), 0.00,
+        float4(0.2400, 0.3600, 0.3000, 0.65), 0.45,
+        float4(0.0000, 0.0000, 0.0000, 1.00), 0.90);
+      float3 ca = czContrast(czBright(ga.rgb, 1.0), 1.5);
+      float as = ga.a * m;
+      float ao = as + gb.a * (1.0 - as);
+      float3 co = as * (1.0 - gb.a) * ca
+                + as * gb.a * czBlend(${BLEND.overlay}, cb, ca)
+                + (1.0 - as) * gb.a * cb;
+      float3 cg = ao > 0.0 ? co / ao : float3(0.0);
+      col = czOver(${BLEND.overlay}, col, cg, ao * opacity);
+    } else {
+      float4 g = czGrad3(t,
+        float4(1.0, 1.0, 1.0, 1.00), 0.10,
+        float4(1.0, 1.0, 1.0, 0.85), 0.20,
+        float4(0.0, 0.0, 0.0, 0.35), 0.90);
+      col = czOver(${BLEND.multiply}, col, g.rgb, g.a * opacity);
+    }
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// tg-vmax (갤러리 VMAX) — shine 은 rainbow-alt 그대로,
+//   glare 는 trainer-gallery-v-max.css 의 radial 한 겹.
+// ─────────────────────────────────────────────────────────────
+const RA_GLARE = `
+  // glare — base 의 overlay 유지
+  float go = opacity * 0.75;
+  if (go > 0.001) {
+    float4 g = czGrad3(czRadCircleT(xy, res, pointer * res),
+      float4(0.9200, 0.9133, 0.8800, 0.75), 0.00,
+      float4(0.2400, 0.3600, 0.3000, 0.65), 0.45,
+      float4(0.0000, 0.0000, 0.0000, 1.00), 1.00);
+    float3 cg = czContrast(czBright(g.rgb, 0.9), 2.0);
+    col = czOver(${BLEND.overlay}, col, cg, g.a * go);
+  }`
+
+// trainer-gallery-v-max.css — radial 한 겹, opacity co*pfc*.85
+const TGM_GLARE = `
+  float go = clamp(opacity * pfc * 0.85, 0.0, 1.0);
+  if (go > 0.001) {
+    float4 g = czGrad3(czRadCircleT(xy, res, pointer * res),
+      float4(0.9300, 0.9200, 0.8700, 1.0), 0.00,
+      float4(0.3800, 0.4200, 0.4080, 1.0), 0.50,
+      float4(0.0000, 0.0000, 0.0000, 1.0), 1.20);
+    col = czOver(${BLEND.overlay}, col, g.rgb, g.a * go);
+  }`
+
+const RAINBOW_ALT = rainbowAlt(RA_GLARE)
+const TG_VMAX = rainbowAlt(TGM_GLARE)
+
 /** 효과별로 필요한 텍스처 URL. texA / texB / texC 순서로 바인딩된다. */
 const IMG = 'https://poke-holo.simey.me/img'
 export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
@@ -828,6 +1112,10 @@ export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
   'trainer-full-art': [`${IMG}/trainerbg.png`],
   'tg-v': [`${IMG}/illusion.png`],
   'v-regular': [`${IMG}/grain.webp`],
+  'rainbow-holo': [`${IMG}/glitter.png`, `${IMG}/illusion-mask.png`],
+  'rainbow-alt': [`${IMG}/glitter.png`],
+  'tg-vmax': [`${IMG}/glitter.png`],
+  'amazing-rare': [`${IMG}/glitter.png`],
   'v-max': [`${IMG}/vmaxbg.jpg`],
   'v-star': [`${IMG}/ancient.png`],
 }
@@ -843,6 +1131,10 @@ const BODIES: Partial<Record<EffectKey, string>> = {
   'v-regular': V_REGULAR,
   'v-max': V_MAX,
   'v-star': V_STAR,
+  'rainbow-holo': RAINBOW_HOLO,
+  'rainbow-alt': RAINBOW_ALT,
+  'tg-vmax': TG_VMAX,
+  'amazing-rare': AMAZING_RARE,
 }
 
 /** 아직 옮기지 않은 효과. basic 으로 대체하고 화면에 표시한다. */

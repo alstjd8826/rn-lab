@@ -27,6 +27,29 @@ export const CARD_ASPECT = 0.718; // 원본 --card-aspect
 const SPRING = { mass: 1, damping: 22, stiffness: 140 } as const;
 const SNAP = { mass: 1, damping: 30, stiffness: 45 } as const;
 
+/** base.css 의 --card-glow. radiant-holo 가 쓴다. */
+const GLOW: Record<string, [number, number, number]> = {
+  water: [0.212, 0.8328, 0.988],
+  fire: [0.9221, 0.3575, 0.2579],
+  grass: [0.5933, 0.9335, 0.3665],
+  lightning: [0.9519, 0.8875, 0.3081],
+  psychic: [0.6755, 0.3196, 0.8404],
+  fighting: [0.5686, 0.3529, 0.1529],
+  darkness: [0.0621, 0.4155, 0.4779],
+  metal: [0.64, 0.752, 0.76],
+  dragon: [0.56, 0.497, 0.14],
+  fairy: [1.0, 0.78, 0.9157],
+};
+const GLOW_DEFAULT: [number, number, number] = [0.8, 1.0, 0.9833];
+
+function cardGlow(types: string[]): [number, number, number] {
+  for (const t of types) {
+    const g = GLOW[t.toLowerCase()];
+    if (g) return g;
+  }
+  return GLOW_DEFAULT;
+}
+
 /** 카드 타입별 --foil-brightness (reverse-holo.css) */
 function foilBrightness(types: string[]) {
   const t = types.join(" ").toLowerCase();
@@ -108,6 +131,9 @@ export default function HoloCard({
       ? 2
       : 0;
 
+  // 워클릿 안에서 함수를 부르면 UI 스레드에서 undefined 가 된다. 미리 계산해 캡처한다.
+  const glow = cardGlow(card.types);
+
   const uniforms = useDerivedValue(() => {
     const cx = px.value * 100 - 50;
     const cy = py.value * 100 - 50;
@@ -123,6 +149,7 @@ export default function HoloCard({
       hasFoil: hasFoil ? 1 : 0,
       foilBright: fb,
       stage: clipKind,
+      glow,
       texASize: [texAW, texAH],
     };
   });

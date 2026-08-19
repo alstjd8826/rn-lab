@@ -44,6 +44,16 @@ float hxArtMask(float2 uv) {
   return mx * my;
 }
 
+// --clip-borders = inset(2.8% 4% round ...) — 얇은 테두리만 뺀 영역
+float hxBorders(float2 uv) {
+  float x = uv.x * 100.0;
+  float y = uv.y * 100.0;
+  float e = 0.3;
+  float mx = smoothstep(4.0 - e, 4.0 + e, x) * (1.0 - smoothstep(96.0 - e, 96.0 + e, x));
+  float my = smoothstep(2.8 - e, 2.8 + e, y) * (1.0 - smoothstep(97.2 - e, 97.2 + e, y));
+  return mx * my;
+}
+
 // --clip-invert = 카드 전체에서 그림창만 뺀 부분 (리버스 홀로가 쓴다).
 float hxArtMaskInv(float2 uv) { return 1.0 - hxArtMask(uv); }
 
@@ -74,6 +84,7 @@ uniform float hasFoil;
 uniform float foilBright;
 uniform float stage;
 uniform float2 texASize;   // texA 원본 픽셀 크기 (타일링에 필요)
+uniform float3 glow;       // --card-glow (카드 타입별)
 `
 
 const SHELL_TAIL = `
@@ -526,18 +537,8 @@ float4 tghRamp(float t) {
   return mix(tghPick(i), tghPick(i + 1), fract(u));
 }
 
-// clip-borders: inset(2.8% 4% round ...) — 얇은 테두리를 뺀 영역
-float tghBorders(float2 uv) {
-  float x = uv.x * 100.0;
-  float y = uv.y * 100.0;
-  float e = 0.3;
-  float mx = smoothstep(4.0 - e, 4.0 + e, x) * (1.0 - smoothstep(96.0 - e, 96.0 + e, x));
-  float my = smoothstep(2.8 - e, 2.8 + e, y) * (1.0 - smoothstep(97.2 - e, 97.2 + e, y));
-  return mx * my;
-}
-
 float3 hxEffect(float3 col, float2 xy, float2 uv) {
-  float m = tghBorders(uv);
+  float m = hxBorders(uv);
   if (opacity > 0.001 && m > 0.001) {
     // 무지개 띠 — size 300% 400%, pos 0% bgy, -22deg
     float2 sz = float2(3.0, 4.0);
@@ -1427,6 +1428,268 @@ float3 hxEffect(float3 col, float2 xy, float2 uv) {
 }
 `
 
+// ─────────────────────────────────────────────────────────────
+// radiant-holo (Radiant Rare) — 45°/-45° 회색 계단 띠를 교차시켜 금속 결을 만들고
+//   그 위에 카드 타입 색(--card-glow)으로 물든 타원 광택을 얹는다.
+//   원본: public/css/cards/radiant-holo.css
+// ─────────────────────────────────────────────────────────────
+const RADIANT_HOLO = `
+${RAINBOW_COMMON}
+
+// repeating-linear-gradient — 1.2% 폭 계단 10개, 각 칸이 평평하다.
+//  밝기: 10 → 20 → 35 → 42.5 → 50 → 42.5 → 35 → 20 → 10 → 0 (%)
+float rdBar(float t) {
+  float u = mod(t * 100.0, 12.0) / 1.2;
+  int i = int(floor(min(u, 9.999)));
+  if (i == 0 || i == 8) { return 0.100; }
+  if (i == 1 || i == 7) { return 0.200; }
+  if (i == 2 || i == 6) { return 0.350; }
+  if (i == 3 || i == 5) { return 0.425; }
+  if (i == 4)           { return 0.500; }
+  return 0.0;
+}
+
+const float3 RD1 = float3(0.9925, 0.7218, 0.7075); // hsl(3,95%,85%)
+const float3 RD2 = float3(0.6800, 0.8560, 1.0000); // hsl(207,100%,84%)
+const float3 RD3 = float3(1.0000, 0.8450, 0.7000); // hsl(29,100%,85%)
+const float3 RD4 = float3(0.7200, 1.0000, 0.9067); // hsl(160,100%,86%)
+const float3 RD5 = float3(0.9922, 0.7478, 0.9555); // hsl(309,94%,87%)
+const float3 RD6 = float3(0.7075, 0.9545, 0.9925); // hsl(188,95%,85%)
+
+float3 rdPick(int i) {
+  int k = i - 6 * (i / 6);
+  if (k == 0) { return RD1; }
+  if (k == 1) { return RD2; }
+  if (k == 2) { return RD3; }
+  if (k == 3) { return RD4; }
+  if (k == 4) { return RD5; }
+  return RD6;
+}
+
+// --space 가 200px (퍼센트가 아니다) → 그라디언트 선 위 200px 간격, 주기 1200px
+float3 rdPastel(float len, float t) {
+  float px = t * len;
+  float u = mod((px - 200.0) / 1200.0, 1.0) * 6.0;
+  int i = int(floor(min(u, 5.999)));
+  return mix(rdPick(i), rdPick(i + 1), fract(u));
+}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  // 포인터의 절반만 따라가는 타원 중심 (px*0.5 + 25%)
+  float2 halfPt = float2(pointer.x * 0.5 + 0.25, pointer.y * 0.5 + 0.25);
+  float t = czRadCircleT(xy, res, pointer * res);
+
+  if (opacity > 0.001) {
+    // ── shine (clip-borders) ──
+    float mb = hxBorders(uv);
+    if (mb > 0.001) {
+      // ③ 맨 아래: -45° 계단 띠 (color-dodge 로 아래에 얹히지만 최하단이라 그대로)
+      float2 sz = float2(2.1);
+      float2 bp = (bgp - 50.0) * 1.5 + 50.0;
+      float2 q = czBgXY(xy, res, sz, bp);
+      float2 box = res * sz;
+      float4 r = float4(float3(rdBar(czLinT(q, box, -45.0))), 1.0);
+      // ② 45° 계단 띠 → darken
+      r = czComposite(${BLEND.darken}, r, float4(float3(rdBar(czLinT(q, box, 45.0))), 1.0));
+      // ① 타원 광택 (카드 타입 색) → exclusion
+      float4 g1 = czGrad2(czRadEllipseT(xy, res, halfPt * res),
+        float4(0.95, 0.95, 0.95, 1.0), 0.20,
+        float4(glow, 1.0), 1.30);
+      r = czComposite(${BLEND.exclusion}, r, g1);
+      float3 sh = czSaturate(czContrast(czBright(r.rgb, 0.5), 2.0), 1.75);
+      col = czOver(${BLEND['color-dodge']}, col, sh, mb * opacity * r.a);
+    }
+
+    // ── :after (clip = 그림창) — 포일 + 55° 파스텔 띠 ──
+    float ma = hxArtMask(uv);
+    if (ma > 0.001) {
+      float2 sz2 = float2(4.0, 1.0);
+      float2 bp2 = (bgp - 50.0) * -2.5 + 50.0;
+      float2 q2 = czBgXY(xy, res, sz2, bp2);
+      float2 box2 = res * sz2;
+      float3 pastel = rdPastel(czLinLen(box2, 55.0), czLinT(q2, box2, 55.0));
+      float4 a = float4(pastel, 1.0);
+      // 포일 (cover) 또는 trainerbg 25% 타일. 마스크 있으면 hard-light, 없으면 difference
+      float4 fb = hasFoil > 0.5
+        ? float4(foilT.eval(xy))
+        : float4(texB.eval(fract(xy / (res * 0.25)) * texASize));
+      int fbBlend = hasFoil > 0.5 ? ${BLEND['hard-light']} : ${BLEND.difference};
+      a = czComposite(fbBlend, a, fb);
+      float3 af = czSaturate(czContrast(czBright(a.rgb, 0.6), 3.0), 2.0);
+      col = czOver(${BLEND['color-dodge']}, col, af, ma * opacity * a.a);
+    }
+
+    // ── :before — glitter(15%) + 타원 radial, overlay ──
+    float2 tile = res * 0.15;
+    float2 gq = xy - 0.5 * (res - tile);
+    float4 gl = float4(texA.eval(fract(gq / tile) * texASize));
+    float2 sz3 = float2(3.5);
+    float2 q3 = czBgXY(xy, res, sz3, float2(50.0));
+    float2 box3 = res * sz3;
+    float4 b = czGrad3(czRadEllipseT(q3, box3, halfPt * box3),
+      float4(0.5800, 0.5800, 0.5800, 0.8), 0.10,
+      float4(0.2000, 0.2000, 0.2000, 0.9), 0.20,
+      float4(0.2000, 0.2000, 0.2000, 0.5), 0.50);
+    b = czComposite(${BLEND['color-dodge']}, b, gl);
+    float3 bf = czSaturate(czContrast(czBright(b.rgb, 0.66), 2.0), 0.5);
+    col = czOver(${BLEND.overlay}, col, bf, b.a * opacity);
+  }
+
+  // glare — hard-light
+  if (opacity > 0.001) {
+    float4 g = czGrad2(t,
+      float4(1.0000, 1.0000, 1.0000, 0.33), 0.00,
+      float4(0.2500, 0.2500, 0.2500, 1.00), 1.10);
+    float3 cg = czContrast(czBright(g.rgb, 1.0), 1.5);
+    col = czOver(${BLEND['hard-light']}, col, cg, g.a * opacity);
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// shiny-vmax (Rare Shiny VMAX) — amazing-rare 골격에 -30° 무지개 한 겹을 더한 것.
+//   반짝이 색이 무채색(248/206 계열)이라 어메이징보다 차갑다.
+//   :after 는 sunpillar 를 hue 로 얹는다 (amazing 은 saturation).
+//   원본: public/css/cards/shiny-vmax.css
+// ─────────────────────────────────────────────────────────────
+const SHINY_VMAX = `
+${SUNPILLAR}
+${RAINBOW_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  float t = czRadCircleT(xy, res, pointer * res);
+
+  if (opacity > 0.001) {
+    // ── shine ── ④ 포인터 radial → ③ -30° 무지개(color-burn)
+    //             → ② glitter 55%(overlay) → ① glitter 40/45%(soft-light)
+    float4 r = czGrad3(t,
+      float4(0.0963, 0.0950, 0.1050, 1.00), 0.10,
+      float4(0.7900, 0.8013, 0.8100, 0.10), 0.50,
+      float4(0.9500, 0.9500, 0.9500, 0.98), 0.90);
+    float2 sz = float2(4.0);
+    float2 q = czBgXY(xy, res, sz, bgp * 1.5);
+    r = czComposite(${BLEND['color-burn']}, r, float4(rcRamp(czLinT(q, res * sz, -30.0)), 1.0));
+    r = czComposite(${BLEND.overlay}, r, rcGlitter(xy, float2(55.0, 55.0)));
+    r = czComposite(${BLEND['soft-light']}, r, rcGlitter(xy, float2(40.0, 45.0)));
+    float3 sh = czSaturate(czContrast(czBright(r.rgb, 1.0), 1.0), 0.85);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // ── :before — 포일 + radial 을 color-burn, lighten, opacity .35, 마스크 없음
+    float4 pb = czGrad3(t,
+      float4(0.9067, 0.9055, 0.9145, 0.95), 0.10,
+      float4(0.6640, 0.6821, 0.6960, 0.50), 0.50,
+      float4(0.0000, 0.0000, 0.0000, 1.00), 1.20);
+    if (hasFoil > 0.5) {
+      pb = czComposite(${BLEND['color-burn']}, pb, float4(foilT.eval(xy)));
+    }
+    float3 pbf = czSaturate(czContrast(czBright(pb.rgb, 1.0), 1.0), 0.4);
+    col = czOver(${BLEND.lighten}, col, pbf, pb.a * 0.35 * opacity);
+
+    // ── :after — sunpillar 를 hue 로. 색만 입힌다.
+    float2 s4 = float2(4.0, 8.0);
+    float2 p4 = float2(50.0 + (50.0 - bgp.x) * 3.0, 50.0 + (50.0 - bgp.y) * 3.0);
+    float2 q4 = czBgXY(xy, res, s4, p4);
+    float3 sp = spRamp(czLinT(q4, res * s4, -30.0), 5);
+    float3 spf = czBright(sp, clamp(0.75 - pfc * 0.5, 0.0, 1.0));
+    col = czOver(${BLEND.hue}, col, spf, opacity);
+  }
+
+  // glare — 부모 + :after(마스크 적용, overlay)
+  if (opacity > 0.001) {
+    float4 gb = czGrad3(t,
+      float4(0.8963, 0.8950, 0.9050, 0.45), 0.00,
+      float4(0.2850, 0.3020, 0.3150, 0.45), 0.45,
+      float4(0.0000, 0.0000, 0.0000, 0.33), 1.20);
+    float3 cb = czContrast(czBright(gb.rgb, 1.0), 1.25);
+    float4 ga = czGrad3(t,
+      float4(0.8963, 0.8950, 0.9050, 0.75), 0.00,
+      float4(0.2850, 0.3020, 0.3150, 0.65), 0.45,
+      float4(0.0000, 0.0000, 0.0000, 0.75), 1.00);
+    float3 ca = czContrast(czBright(ga.rgb, 1.0), 1.25);
+    float as = ga.a * m;
+    float ao = as + gb.a * (1.0 - as);
+    float3 co = as * (1.0 - gb.a) * ca
+              + as * gb.a * czBlend(${BLEND.overlay}, cb, ca)
+              + (1.0 - as) * gb.a * cb;
+    float3 cg = ao > 0.0 ? co / ao : float3(0.0);
+    col = czOver(${BLEND.overlay}, col, cg, ao * opacity);
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// trainer-gallery-secret-rare (갤러리 골드) — secret-rare 에서 conic 을 빼고
+//   금색 45° 그라디언트를 맨 아래에 깔고 radial 을 color 로 얹는다.
+//   shine / :before / :after 전부 mask-image: none 이라 마스크를 안 탄다.
+//   원본: public/css/cards/trainer-gallery-secret-rare.css
+// ─────────────────────────────────────────────────────────────
+const TG_SECRET_RARE = `
+${SUNPILLAR}
+${RAINBOW_COMMON}
+
+const float3 SR_Y1 = float3(0.9750, 0.7533, 0.0250); // hsl(46,95%,50%)
+const float3 SR_Y2 = float3(1.0000, 0.9173, 0.3800); // hsl(52,100%,69%)
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float t = czRadCircleT(xy, res, pointer * res);
+
+  if (opacity > 0.001) {
+    // ── shine (마스크 없음) ──
+    // ④ 맨 아래: 금색 45° 그라디언트
+    float3 gold = mix(SR_Y1, SR_Y2, clamp(czLinT(xy, res, 45.0), 0.0, 1.0));
+    float4 r = float4(gold, 1.0);
+    // ③ 포인터 radial → color (색상만 가져간다)
+    float4 g3 = czGrad3(t,
+      float4(0.0784, 0.1216, 0.1019, 1.00), 0.10,
+      float4(0.7560, 0.8440, 0.8396, 0.10), 0.50,
+      float4(0.9500, 0.9500, 0.9500, 0.98), 0.90);
+    r = czComposite(${BLEND.color}, r, g3);
+    // ② glitter 55% → darken
+    r = czComposite(${BLEND.darken}, r, rcGlitter(xy, float2(55.0, 55.0)));
+    // ① glitter 40/45% → soft-light
+    r = czComposite(${BLEND['soft-light']}, r, rcGlitter(xy, float2(40.0, 45.0)));
+    float3 sh = hasFoil > 0.5
+      ? r.rgb
+      : czSaturate(czContrast(czBright(r.rgb, pfc * 0.3 + 0.2), 2.0), 0.75);
+    col = czOver(${BLEND['color-dodge']}, col, sh, opacity * r.a);
+
+    // ── :before / :after 는 secret-rare 를 그대로 물려받는다 ──
+    float4 pb = czGrad2(t,
+      float4(0.9200, 0.8867, 0.8800, 0.95), 0.10,
+      float4(0.0000, 0.0000, 0.0000, 1.00), 0.70);
+    pb = czComposite(${BLEND.multiply}, pb, float4(gold, 1.0));
+    float4 fb = hasFoil > 0.5
+      ? float4(foilT.eval(xy))
+      : float4(texB.eval(fract(xy / (res * 0.33)) * texASize));
+    pb = czComposite(${BLEND['hard-light']}, pb, fb);
+    float3 pbf = czSaturate(czContrast(czBright(pb.rgb, 1.25), 1.25), 0.35);
+    col = czOver(${BLEND.lighten}, col, pbf, pb.a * 0.8 * opacity);
+
+    float2 tile = res * 0.25;
+    float2 q = xy - 0.5 * (res - tile)
+             - (float2(1.0) - 2.0 * float2(pfl, pft));
+    float4 ga = float4(texA.eval(fract(q / tile) * texASize));
+    float3 gaf = czContrast(czBright(ga.rgb, pfc * 0.6 + 0.6), 1.5);
+    col = czOver(${BLEND.overlay}, col, gaf, ga.a * opacity);
+  }
+
+  // glare — secret-rare 와 같고, 마스크 없는 카드는 brightness(.5) contrast(1)
+  if (opacity > 0.001) {
+    float4 g = czGrad2(t,
+      float4(0.8160, 0.8080, 0.7840, 0.3), 0.00,
+      float4(0.1380, 0.1152, 0.1020, 1.0), 1.80);
+    float3 cg = hasFoil > 0.5
+      ? czContrast(czBright(g.rgb, 1.3), 1.5)
+      : czContrast(czBright(g.rgb, 0.5), 1.0);
+    col = czOver(${BLEND['hard-light']}, col, cg, g.a * opacity);
+  }
+  return col;
+}
+`
+
 /** 효과별로 필요한 텍스처 URL. texA / texB / texC 순서로 바인딩된다. */
 const IMG = 'https://poke-holo.simey.me/img'
 export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
@@ -1441,6 +1704,9 @@ export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
   'secret-rare': [`${IMG}/glitter.png`, `${IMG}/geometric.png`],
   // 세 장 모두 734x1024 로 같아서 texASize 하나로 매핑한다
   'shiny-rare': [`${IMG}/illusion.png`],
+  'radiant-holo': [`${IMG}/glitter.png`, `${IMG}/trainerbg.png`],
+  'shiny-vmax': [`${IMG}/glitter.png`],
+  'trainer-gallery-secret-rare': [`${IMG}/glitter.png`, `${IMG}/geometric.png`],
   'swsh-pikachu': [`${IMG}/glitter.png`, `${IMG}/illusion-mask.png`],
   'shiny-v': [`${IMG}/illusion.png`],
   'cosmos-holo': [
@@ -1472,6 +1738,9 @@ const BODIES: Partial<Record<EffectKey, string>> = {
   'shiny-rare': SHINY_RARE,
   'shiny-v': SHINY_V,
   'swsh-pikachu': SWSH_PIKACHU,
+  'radiant-holo': RADIANT_HOLO,
+  'shiny-vmax': SHINY_VMAX,
+  'trainer-gallery-secret-rare': TG_SECRET_RARE,
 }
 
 /** 아직 옮기지 않은 효과. basic 으로 대체하고 화면에 표시한다. */

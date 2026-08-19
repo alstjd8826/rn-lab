@@ -123,7 +123,16 @@ export const lesson08: Lesson = {
   no: '⑧',
   slug: 'nitro',
   title: 'Nitro Modules',
-  summary: 'ObjC 를 건너뛰고 바인딩을 미리 컴파일해 더 빠르게',
+  summary: 'ObjC 를 건너뛰고 Swift 를 직접 불러 더 빠르게',
+
+  sources: [
+    'nitro.margelo.com/docs/getting-started/what-is-nitro — ObjC 미사용, Swift<>C++ interop, HybridObject 정의, 자체 벤치마크',
+    '※ Nitro 는 RN 표준이 아니다. 1차 출처가 Meta 가 아니라 Margelo 다',
+    '※ "빌드 타임 정적 컴파일" 은 Margelo 문서에서 확인 못 해 본문에서 뺐음',
+    '이 앱 실측 — Debug/Release 각 3회. 릴리즈에서 Nitro 178ns / Turbo 206ns / raw JSI 527ns',
+    '※ 저희 TurboModule 은 순수 C++ 이라 호출 경로에 ObjC 가 없다. 벤더 수치(약 16배)와',
+    '   저희 수치(x1.16)의 차이는 비교 대상이 달라서로 보인다',
+  ],
 
   chapters: [
     {
@@ -186,20 +195,24 @@ export const lesson08: Lesson = {
               title: 'ObjC 를 아예 건너뛴다',
               side: 'native',
               text:
-                'Swift 5.9 부터 **C++ 상호운용**이 정식으로 들어왔습니다. ' +
-                'C++ 이 Swift 를 직접 부를 수 있습니다. 중간 다리를 통째로 뺐습니다.',
+                'Margelo 문서의 표현입니다 — "Unlike Turbo- or Expo-Modules, ' +
+                '**Nitro-Modules does not use Objective-C at all.** Nitro is built using ' +
+                'the new **Swift <> C++ interop**, which is close to zero-overhead."',
             },
             {
-              title: '바인딩을 빌드 타임에 정적 컴파일',
+              title: '스펙에서 바인딩을 생성한다',
               side: 'gen',
               text:
-                '`nitrogen` 이 스펙을 읽고 바인딩을 미리 다 만들어둡니다. ' +
-                '런타임에 구성할 게 없습니다.',
+                '`nitrogen` 이 스펙을 읽고 바인딩 코드를 만들어줍니다.\n\n' +
+                '(원래 여기에 "빌드 타임에 정적 컴파일" 이라고 썼는데 **Margelo 문서에서 ' +
+                '그 표현을 확인하지 못했습니다.** 검색 요약에서 온 것으로 보여 뺐습니다.)',
             },
             {
               title: 'HybridObject — 양쪽에 사는 객체',
               side: 'js',
               text:
+                '문서 정의로는 **"a native object in Nitro, implemented in either C++, ' +
+                'Swift or Kotlin"** 입니다.\n\n' +
                 'TurboModule 이 기본적으로 **함수 호출 창구** 하나라면, ' +
                 'Nitro 의 HybridObject 는 **객체 자체가 양쪽 세계에 존재**합니다. ' +
                 '프로퍼티를 갖고, 다른 HybridObject 를 주고받을 수도 있습니다.\n\n' +
@@ -282,12 +295,39 @@ export const lesson08: Lesson = {
         {
           kind: 'callout',
           tone: 'key',
-          title: '그런데 차이가 생각보다 작습니다',
+          title: '★ 벤더 수치와 크게 다릅니다',
           text:
-            '릴리즈에서 Nitro 가 1위지만 TurboModule 대비 **×1.16** 입니다. ' +
-            '벤더 자료에서 보이는 수십 배 같은 숫자와는 거리가 멉니다.\n\n' +
-            '그런 숫자는 대개 더 극단적인 조건(초당 수만 번, 복잡한 타입 변환)에서 나온 것입니다. ' +
-            '`add` 처럼 단순한 호출에서는 이 정도가 현실적인 폭입니다.',
+            'Margelo 문서에는 자체 벤치마크가 있습니다. `addNumbers()` 10만 회 기준 ' +
+            '**Nitro 7.27ms vs TurboModules 115.86ms** — 약 **16배** 차이입니다.\n\n' +
+            '그런데 저희 실측은 **×1.16** 이었습니다. 같은 `add` 인데 왜 이렇게 다를까요.',
+        },
+        {
+          kind: 'prose',
+          text:
+            '원인은 **비교 대상이 다르기 때문**으로 보입니다.\n\n' +
+            'Nitro 의 주무기는 "ObjC 를 안 거친다" 입니다. 그런데 ③에서 만든 저희 TurboModule 은 ' +
+            '**순수 C++ 모듈**입니다. 호출 경로에 ObjC 가 애초에 없습니다 — ObjC++ 는 ' +
+            '모듈을 만들 때 한 번 쓰이는 provider 에만 있고, `add` 를 부를 때는 안 거칩니다.',
+        },
+        {
+          kind: 'code',
+          code:
+            '벤더 비교 (추정)   JS → C++ → ObjC → Swift   vs   JS → C++ → Swift\n' +
+            '                            ^^^^ 이 차이가 16배\n' +
+            '\n' +
+            '저희 비교          JS → C++ (순수)          vs   JS → C++ → Swift\n' +
+            '                   ObjC 없음                     ObjC 없음',
+          highlight: [1],
+        },
+        {
+          kind: 'callout',
+          tone: 'key',
+          text:
+            '즉 저희는 **ObjC 를 안 거치는 것끼리** 붙였습니다. Nitro 의 주무기가 무력화된 조건이었고, ' +
+            '그래서 차이가 ×1.16 로 좁혀진 것으로 보입니다.\n\n' +
+            '**틀린 측정이 아니라 다른 질문에 답한 것**입니다. ' +
+            '"Nitro vs ObjC 기반 모듈" 이 아니라 "Nitro vs 순수 C++ 모듈" 을 잰 셈이죠.\n\n' +
+            'Margelo 도 자기 수치를 **"extreme cases"** 라고 단서를 답니다.',
         },
         {
           kind: 'callout',

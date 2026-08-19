@@ -7,6 +7,7 @@ import { lesson05 } from './05-strict-ts'
 import { lesson06 } from './06-hermes'
 import { lesson07 } from './07-expo'
 import { lesson08 } from './08-nitro'
+import { lesson09 } from './09-perf'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
@@ -18,15 +19,7 @@ export const LESSONS: Lesson[] = [
   lesson06,
   lesson07,
   lesson08,
-  {
-    no: '⑨',
-    slug: 'perf',
-    title: '성능 계측',
-    summary: 'JS FPS 와 UI FPS 는 다른 숫자다',
-    comingUp:
-      'JS 스레드를 일부러 막아서 화면은 멀쩡한데 반응만 없는 상태를 만들어 봅니다. ' +
-      '두 FPS 를 따로 재는 이유가 손에 잡힙니다.',
-  },
+  lesson09,
   {
     no: '⑩',
     slug: 'react-compiler',

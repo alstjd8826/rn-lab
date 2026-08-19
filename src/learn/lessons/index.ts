@@ -5,6 +5,7 @@ import { lesson03 } from './03-turbomodules'
 import { lesson04 } from './04-codegen'
 import { lesson05 } from './05-strict-ts'
 import { lesson06 } from './06-hermes'
+import { lesson07 } from './07-expo'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
@@ -14,15 +15,7 @@ export const LESSONS: Lesson[] = [
   lesson04,
   lesson05,
   lesson06,
-  {
-    no: '⑦',
-    slug: 'expo',
-    title: 'Expo',
-    summary: '네이티브 폴더를 산출물로 취급해 업그레이드 고통을 없앤 방식',
-    comingUp:
-      'config plugin 을 직접 하나 써보고, prebuild --clean 으로 ios/ 를 날린 뒤 ' +
-      '설정이 그대로 복원되는 것을 확인합니다.',
-  },
+  lesson07,
   {
     no: '⑧',
     slug: 'nitro',

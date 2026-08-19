@@ -27,7 +27,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@bacons/apple-targets"
-    ]
+      "@bacons/apple-targets",
+      "./plugins/withLearnMarker"
+    ],
+    "extra": {
+      "learnLab": {
+        "course": "RN 새 구조 익히기",
+        "lessons": 10
+      }
+    }
   }
 }

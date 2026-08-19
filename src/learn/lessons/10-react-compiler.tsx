@@ -105,6 +105,15 @@ export const lesson10: Lesson = {
   title: 'React Compiler',
   summary: 'useMemo 를 컴파일러가 대신 발라준다 — 조용히 실패하는 함정까지',
 
+  sources: [
+    '이 앱 실측 — healthcheck 26/26, 부모 6회 렌더 시 A 자식 1회 / B 자식 6회 커밋',
+    '이 앱 실측 — 컴파일러 ON 시 ⑨ 화면에서 Reanimated 경고 대량 발생,',
+    '  OFF 하면 0개, 해당 컴포넌트만 use no memo 로 제외해도 0개',
+    'app.json experiments.reactCompiler + babel-plugin-react-compiler 1.0.0',
+    "※ 'use no memo' 로 대조군을 만든 것은 규칙 위반 상황을 확실히 재현하기 위한 장치",
+    '※ 캐시 슬롯 코드는 개념 설명용이며 실제 생성 코드를 덤프해 확인한 것은 아님',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -255,6 +264,58 @@ export const lesson10: Lesson = {
           text:
             '26개 중 26개. 커버리지가 낮으면 켜봐야 의미가 없으니 ' +
             '**규칙 정리를 먼저** 해야 합니다.',
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
+          title: '★ 그런데 healthcheck 통과가 안전을 뜻하진 않았습니다',
+          text:
+            '26/26 을 받고 켰는데, **⑨ 성능 계측 화면에서 경고가 쏟아졌습니다.**',
+        },
+        {
+          kind: 'code',
+          code:
+            'WARN [Reanimated] Reading from `value` during\n' +
+            'component render. Please ensure that you don\'t\n' +
+            'access the `value` property ... while React is\n' +
+            'rendering a component.',
+          highlight: [0, 1],
+        },
+        {
+          kind: 'prose',
+          text:
+            '이상한 건 **그 컴포넌트에 렌더 중 `.value` 를 읽는 코드가 없다**는 점이었습니다. ' +
+            '전부 워클릿·이펙트·콜백 안이었거든요.\n\n' +
+            '그래서 원인을 갈라봤습니다.',
+        },
+        {
+          kind: 'compare',
+          leftLabel: '조건',
+          rightLabel: '경고 수',
+          rows: [
+            { label: '컴파일러 ON', left: '⑨ 화면 진입', right: '대량 발생' },
+            { label: '컴파일러 OFF', left: '같은 화면', right: '0개' },
+            { label: '해당 컴포넌트만 제외', left: "'use no memo'", right: '0개' },
+          ],
+        },
+        {
+          kind: 'callout',
+          tone: 'key',
+          text:
+            '**컴파일러가 원인이었습니다.** Reanimated 의 shared value 와 궁합 문제로 보입니다.\n\n' +
+            '결국 ⑨의 해당 컴포넌트에만 `\'use no memo\'` 를 붙여 제외했습니다. ' +
+            '이 교재에서 실제로 쓴 대응이고, 그래서 ⑨ 코드에 그 지시문이 들어 있습니다.',
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
+          title: '여기서 얻을 교훈',
+          text:
+            '**healthcheck 는 "컴파일 가능한가" 만 봅니다.** 켰을 때 런타임에서 라이브러리와 ' +
+            '충돌하는지는 알려주지 않습니다.\n\n' +
+            '그러니 순서에 한 단계가 더 붙습니다 — ESLint → healthcheck → **켜고 실제로 돌려보기** ' +
+            '→ DevTools 배지. 특히 Reanimated 처럼 렌더 규칙에 민감한 라이브러리를 쓰면 ' +
+            '화면을 하나씩 열어보는 게 낫습니다.',
         },
       ],
     },

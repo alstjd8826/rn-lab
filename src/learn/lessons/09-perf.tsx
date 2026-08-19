@@ -15,6 +15,11 @@ type Window = { ms: number; uiFps: number; jsFps: number }
 
 // 두 스레드의 프레임을 각각 세고, JS 를 막았을 때 어떻게 갈라지는지 본다.
 function TwoFpsDemo() {
+  // React Compiler 를 켜면 Reanimated 가 "Reading from value during component
+  // render" 경고를 대량으로 뱉는다. 컴파일러를 끄면 사라지는 걸 확인했다.
+  // 이 컴포넌트만 컴파일러에서 제외한다. ⑩ 6장에 경위를 적어뒀다.
+  'use no memo'
+
   // UI 스레드에서 증가 — 워클릿
   const uiFrames = useSharedValue(0)
   // JS 스레드에서 증가 — requestAnimationFrame

@@ -3,6 +3,7 @@ import { lesson01 } from './01-jsi'
 import { lesson02 } from './02-fabric'
 import { lesson03 } from './03-turbomodules'
 import { lesson04 } from './04-codegen'
+import { lesson05 } from './05-strict-ts'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
@@ -10,15 +11,7 @@ export const LESSONS: Lesson[] = [
   lesson02,
   lesson03,
   lesson04,
-  {
-    no: '⑤',
-    slug: 'strict-ts',
-    title: 'Strict TypeScript API',
-    summary: 'RN 타입을 손으로 안 적고 소스에서 생성',
-    comingUp:
-      '지금 RN 0.86 은 opt-in 상태입니다. 켜서 딥 임포트가 어떻게 깨지는지 직접 봅니다. ' +
-      '0.87 로 올리면 강제되는 것을 미리 겪는 셈입니다.',
-  },
+  lesson05,
   {
     no: '⑥',
     slug: 'hermes',

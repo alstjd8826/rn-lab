@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type ComponentRef } from 'react'
 import { Button, StyleSheet, Text, View } from 'react-native'
 import { DepthProbeView } from 'react-native-fabric-lab'
 import { C, MONO } from '../theme'
@@ -110,7 +110,8 @@ function FlatteningDemo() {
 // ─────────────────────────────────────────────
 function SyncMeasureDemo() {
   const [round, setRound] = useState(0)
-  const boxRef = useRef<View | null>(null)
+  // Strict API 에서는 ref 에 담기는 게 컴포넌트가 아니라 인스턴스다.
+  const boxRef = useRef<ComponentRef<typeof View> | null>(null)
   const [syncSize, setSyncSize] = useState<string | null>(null)
   const [asyncSize, setAsyncSize] = useState<string | null>(null)
   const [syncFirst, setSyncFirst] = useState<boolean | null>(null)
@@ -120,10 +121,8 @@ function SyncMeasureDemo() {
 
   useLayoutEffect(() => {
     // DOM 유사 API. 커밋 직후 · 화면에 그려지기 전에 동기로 읽힌다.
-    const node = boxRef.current as unknown as {
-      getBoundingClientRect?: () => { width: number; height: number }
-    } | null
-    const rect = node?.getBoundingClientRect?.()
+    // Strict API 를 켜면 getBoundingClientRect 가 제대로 타입되어 캐스팅이 필요 없다.
+    const rect = boxRef.current?.getBoundingClientRect()
     if (rect) {
       orderRef.current.push('sync')
       setSyncSize(`${rect.width.toFixed(0)} × ${rect.height.toFixed(0)}`)

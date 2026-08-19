@@ -16,6 +16,8 @@ export interface Spec extends TurboModule {
   readonly ping: () => number
   /** 지금까지 ping 이 몇 번 불렸는지 */
   readonly getPingCount: () => number
+  /** ⑧ 벤치마크용. Nitro · raw JSI 와 같은 일을 시켜 비교한다 */
+  readonly add: (a: number, b: number) => number
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('NativeTurboLab')

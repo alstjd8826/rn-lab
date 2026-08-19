@@ -42,4 +42,9 @@ double NativeTurboLab::getPingCount(jsi::Runtime&) {
   return pingCount_;
 }
 
+// ⑧ 벤치마크용. Nitro · raw JSI 의 add 와 같은 일을 한다.
+double NativeTurboLab::add(jsi::Runtime&, double a, double b) {
+  return a + b;
+}
+
 } // namespace facebook::react

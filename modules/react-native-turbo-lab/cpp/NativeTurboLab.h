@@ -14,6 +14,7 @@ class NativeTurboLab : public NativeTurboLabCxxSpec<NativeTurboLab> {
   double getUptimeMs(jsi::Runtime& rt);
   double ping(jsi::Runtime& rt);
   double getPingCount(jsi::Runtime& rt);
+  double add(jsi::Runtime& rt, double a, double b);
 
  private:
   // 생성자에서 한 번 기록된다. 이 값이 이 실험의 전부다.

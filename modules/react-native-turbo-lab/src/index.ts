@@ -33,4 +33,5 @@ export const turboLab = {
   getUptimeMs: () => mod().getUptimeMs(),
   ping: () => mod().ping(),
   getPingCount: () => mod().getPingCount(),
+  add: (a: number, b: number) => mod().add(a, b),
 }

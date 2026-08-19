@@ -6,6 +6,7 @@ import { lesson04 } from './04-codegen'
 import { lesson05 } from './05-strict-ts'
 import { lesson06 } from './06-hermes'
 import { lesson07 } from './07-expo'
+import { lesson08 } from './08-nitro'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
@@ -16,15 +17,7 @@ export const LESSONS: Lesson[] = [
   lesson05,
   lesson06,
   lesson07,
-  {
-    no: '⑧',
-    slug: 'nitro',
-    title: 'Nitro Modules',
-    summary: 'ObjC 를 건너뛰고 바인딩을 미리 컴파일해 더 빠르게',
-    comingUp:
-      '이 앱에 이미 Nitro 모듈이 있습니다. 같은 기능을 TurboModule 로도 만들어 ' +
-      '나란히 벤치마크합니다.',
-  },
+  lesson08,
   {
     no: '⑨',
     slug: 'perf',

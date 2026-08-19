@@ -4,6 +4,7 @@ import { lesson02 } from './02-fabric'
 import { lesson03 } from './03-turbomodules'
 import { lesson04 } from './04-codegen'
 import { lesson05 } from './05-strict-ts'
+import { lesson06 } from './06-hermes'
 
 // ①~⑩. 아직 안 만든 것도 등록해두면 전체 지도가 보인다.
 export const LESSONS: Lesson[] = [
@@ -12,15 +13,7 @@ export const LESSONS: Lesson[] = [
   lesson03,
   lesson04,
   lesson05,
-  {
-    no: '⑥',
-    slug: 'hermes',
-    title: 'Hermes',
-    summary: '앱 켤 때 JS 를 해석하지 않게 만든 엔진',
-    comingUp:
-      '바이트코드 파일 크기를 재보고, 샘플링 프로파일러로 JS 스레드가 어디에 ' +
-      '시간을 쓰는지 떠봅니다.',
-  },
+  lesson06,
   {
     no: '⑦',
     slug: 'expo',

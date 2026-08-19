@@ -62,9 +62,12 @@ function foilBrightness(types: string[]) {
 export default function HoloCard({
   card,
   width,
+  probe,
 }: {
   card: CardData;
   width: number;
+  /** 검증용. 주면 홀로를 켜고 포인터를 그 위치에 고정한다 (0..1). */
+  probe?: { x: number; y: number };
 }) {
   const W = width;
   const H = Math.round(W / CARD_ASPECT);
@@ -84,11 +87,11 @@ export default function HoloCard({
     [card.effect],
   );
 
-  const px = useSharedValue(0.5);
-  const py = useSharedValue(0.5);
+  const px = useSharedValue(probe ? probe.x : 0.5);
+  const py = useSharedValue(probe ? probe.y : 0.5);
   const rotX = useSharedValue(0);
   const rotY = useSharedValue(0);
-  const opacity = useSharedValue(0);
+  const opacity = useSharedValue(probe ? 1 : 0);
 
   const pan = Gesture.Pan()
     .minDistance(0)

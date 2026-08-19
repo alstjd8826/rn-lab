@@ -131,6 +131,14 @@ export const lesson03: Lesson = {
   title: 'TurboModules',
   summary: '네이티브 기능을 앱 시작 때가 아니라 처음 쓸 때 만드는 방식',
 
+  sources: [
+    'reactnative.dev/docs/legacy/native-modules-android — eagerly initializes 원문, TurboReactPackage 대안',
+    'reactnative.dev/docs/turbo-native-modules-introduction — 스펙 우선 방식과 타입 안전성',
+    'reactnative.dev/docs/the-new-architecture/pure-cxx-modules — 순수 C++ 모듈 배선',
+    'reactnative.dev/blog/2018/06/14/state-of-react-native-2018 — 비동기 브릿지의 한계',
+    '※ 지연 생성은 공식 TurboModules 문서에 없다. 5장의 실측이 근거',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -161,6 +169,18 @@ export const lesson03: Lesson = {
             '  );\n' +
             '}',
           highlight: [2, 3, 4],
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · docs/legacy/native-modules-android',
+          code:
+            'this way of registering native modules eagerly\n' +
+            'initializes all native modules when the\n' +
+            'application starts, which adds to the startup\n' +
+            'time of an application.',
+          highlight: [0, 1],
+          caption:
+            '문서가 직접 인정하는 문제입니다. 대안으로 TurboReactPackage 를 안내합니다.',
         },
         {
           kind: 'callout',
@@ -200,6 +220,16 @@ export const lesson03: Lesson = {
             '모듈은 만들지 않습니다.\n\n' +
             'JS 가 그 모듈을 처음 찾는 순간 명부를 보고 인스턴스를 만들고, ' +
             '그 다음부터는 캐시에서 꺼냅니다.',
+        },
+        {
+          kind: 'callout',
+          tone: 'info',
+          title: '이건 문서가 아니라 실측 근거입니다',
+          text:
+            'TurboModules 공식 문서는 **타입 안전성 중심으로 설명**하고 지연 생성은 ' +
+            '언급하지 않습니다. 레거시 문서가 "eagerly initializes" 문제를 인정하고 ' +
+            '대안을 안내할 뿐입니다.\n\n' +
+            '그래서 지연 생성 여부는 **이 앱에서 직접 재서 확인**했습니다. 5장이 그 측정입니다.',
         },
         {
           kind: 'compare',

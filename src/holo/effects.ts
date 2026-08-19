@@ -1105,6 +1105,89 @@ const TGM_GLARE = `
 const RAINBOW_ALT = rainbowAlt(RA_GLARE)
 const TG_VMAX = rainbowAlt(TGM_GLARE)
 
+// ─────────────────────────────────────────────────────────────
+// secret-rare (Rare Secret / 골드) — 21종 중 유일하게 conic-gradient 를 쓴다.
+//   금색이 카드 중심을 축으로 빙 돈다.
+//   원본: public/css/cards/secret-rare.css
+// ─────────────────────────────────────────────────────────────
+const secretRare = (extraFilter: string) => `
+${SUNPILLAR}
+${RAINBOW_COMMON}
+
+const float3 SR_Y1 = float3(0.9750, 0.7533, 0.0250); // hsl(46,95%,50%)
+const float3 SR_Y2 = float3(1.0000, 0.9173, 0.3800); // hsl(52,100%,69%)
+
+// conic-gradient(clr-4, clr-5, clr-6, clr-1, clr-4) — 스톱 5개 = 4구간
+float3 srConic(float2 xy) {
+  float t = czConT(xy, res * 0.5, 0.0) * 4.0;
+  int i = int(floor(min(t, 3.999)));
+  float f = fract(t);
+  float3 a = i == 0 ? SP4 : i == 1 ? SP5 : i == 2 ? SP6 : SP1;
+  float3 b = i == 0 ? SP5 : i == 1 ? SP6 : i == 2 ? SP1 : SP4;
+  return mix(a, b, f);
+}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  float t = czRadCircleT(xy, res, pointer * res);
+
+  if (opacity > 0.001) {
+    // ── shine ── ④ 포인터 radial → ③ conic(overlay) → ② glitter(hard-light) → ① glitter(soft-light)
+    float4 r = czGrad2(t,
+      float4(0.0000, 0.0000, 0.0000, 0.98), 0.10,
+      float4(0.9500, 0.9500, 0.9500, 0.15), 0.90);
+    r = czComposite(${BLEND.overlay}, r, float4(srConic(xy), 1.0));
+    r = czComposite(${BLEND['hard-light']}, r, rcGlitter(xy, float2(55.0, 55.0)));
+    r = czComposite(${BLEND['soft-light']}, r, rcGlitter(xy, float2(45.0, 45.0)));
+    float3 sh = ${extraFilter};
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * r.a);
+
+    // ── :before — 포일 + 금색 + radial. lighten, opacity .8, 마스크 없음
+    float4 pb = czGrad2(t,
+      float4(0.9200, 0.8867, 0.8800, 0.95), 0.10,
+      float4(0.0000, 0.0000, 0.0000, 1.00), 0.70);
+    // 금색 45° 그라디언트 → multiply
+    float3 gold = mix(SR_Y1, SR_Y2, clamp(czLinT(xy, res, 45.0), 0.0, 1.0));
+    pb = czComposite(${BLEND.multiply}, pb, float4(gold, 1.0));
+    // 포일 (cover) 또는 geometric 33% 타일 → hard-light
+    float4 fb = hasFoil > 0.5
+      ? float4(foilT.eval(xy))
+      : float4(texB.eval(fract(xy / (res * 0.33)) * texASize));
+    pb = czComposite(${BLEND['hard-light']}, pb, fb);
+    float3 pbf = czSaturate(czContrast(czBright(pb.rgb, 1.25), 1.25), 0.35);
+    col = czOver(${BLEND.lighten}, col, pbf, pb.a * 0.8 * opacity);
+
+    // ── :after — glitter 를 1px 어긋나게. overlay, 마스크 없음
+    float2 sft = float2(1.0);
+    float2 apos = float2(50.0, 50.0); // 퍼센트 기준은 같고 px 만 미세 이동
+    float2 tile = res * 0.25;
+    float2 q = xy - apos / 100.0 * (res - tile)
+             - (float2(1.0) - 2.0 * float2(pfl, pft)) * sft;
+    float4 ga = float4(texA.eval(fract(q / tile) * texASize));
+    float3 gaf = czContrast(czBright(ga.rgb, pfc * 0.6 + 0.6), 1.5);
+    col = czOver(${BLEND.overlay}, col, gaf, ga.a * opacity);
+  }
+
+  // glare — hard-light
+  if (opacity > 0.001) {
+    float4 g = czGrad2(t,
+      float4(0.8160, 0.8080, 0.7840, 0.3), 0.00,
+      float4(0.1380, 0.1152, 0.1020, 1.0), 1.80);
+    float3 cg = czContrast(czBright(g.rgb, 1.3), 1.5);
+    col = czOver(${BLEND['hard-light']}, col, cg, g.a * opacity);
+  }
+  return col;
+}
+`
+
+// 마스크 있으면 brightness(0.4 + pfc*0.2) contrast(1) saturate(2.7),
+// 없으면 brightness(pfc*0.3 + 0.2) contrast(2) saturate(0.75)
+const SECRET_RARE = secretRare(
+  'hasFoil > 0.5' +
+    ' ? czSaturate(czContrast(czBright(r.rgb, 0.4 + pfc * 0.2), 1.0), 2.7)' +
+    ' : czSaturate(czContrast(czBright(r.rgb, pfc * 0.3 + 0.2), 2.0), 0.75)'
+)
+
 /** 효과별로 필요한 텍스처 URL. texA / texB / texC 순서로 바인딩된다. */
 const IMG = 'https://poke-holo.simey.me/img'
 export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
@@ -1116,6 +1199,7 @@ export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
   'rainbow-alt': [`${IMG}/glitter.png`],
   'tg-vmax': [`${IMG}/glitter.png`],
   'amazing-rare': [`${IMG}/glitter.png`],
+  'secret-rare': [`${IMG}/glitter.png`, `${IMG}/geometric.png`],
   'v-max': [`${IMG}/vmaxbg.jpg`],
   'v-star': [`${IMG}/ancient.png`],
 }
@@ -1135,6 +1219,7 @@ const BODIES: Partial<Record<EffectKey, string>> = {
   'rainbow-alt': RAINBOW_ALT,
   'tg-vmax': TG_VMAX,
   'amazing-rare': AMAZING_RARE,
+  'secret-rare': SECRET_RARE,
 }
 
 /** 아직 옮기지 않은 효과. basic 으로 대체하고 화면에 표시한다. */

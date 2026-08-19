@@ -45,11 +45,15 @@ float hxMask(float2 xy, float2 uv) {
 }
 `
 
-/** 모든 효과가 공유하는 껍데기. 앞에 프렐류드, 뒤에 main 이 붙는다. */
+/** 모든 효과가 공유하는 껍데기. 앞에 프렐류드, 뒤에 main 이 붙는다.
+ *  texA/texB/texC 는 효과별 텍스처 (EFFECT_TEXTURES 로 선언). 안 쓰면 카드가 들어온다. */
 const SHELL_HEAD = `
 uniform shader card;
 uniform shader maskT;
 uniform shader foilT;
+uniform shader texA;
+uniform shader texB;
+uniform shader texC;
 uniform float2 res;
 uniform float2 pointer;
 uniform float2 bgp;
@@ -60,6 +64,7 @@ uniform float pft;
 uniform float hasFoil;
 uniform float foilBright;
 uniform float stage;
+uniform float2 texASize;   // texA 원본 픽셀 크기 (타일링에 필요)
 `
 
 const SHELL_TAIL = `
@@ -256,10 +261,325 @@ float3 hxEffect(float3 col, float2 xy, float2 uv) {
 }
 `
 
+// ─────────────────────────────────────────────────────────────
+// v-full-art (Rare Ultra) — sunpillar 계열의 기준.
+//   원본: public/css/cards/v-full-art.css
+//   shine 배경이 4겹이다. 아래에서 위로:
+//     ④ 포인터 원형 어둠  ③ 133° 청록 띠  ② 0° sunpillar 6색  ① 포일 텍스처
+//   블렌드 목록 soft-light, hue, hard-light 는 위 레이어부터 매핑된다.
+// ─────────────────────────────────────────────────────────────
+const SUNPILLAR = `
+const float3 SP1 = float3(1.0000, 0.4780, 0.4600); // hsl(2,100%,73%)
+const float3 SP2 = float3(1.0000, 0.9277, 0.3800); // hsl(53,100%,69%)
+const float3 SP3 = float3(0.6590, 1.0000, 0.3800); // hsl(93,100%,69%)
+const float3 SP4 = float3(0.5200, 1.0000, 0.9680); // hsl(176,100%,76%)
+const float3 SP5 = float3(0.4800, 0.5840, 1.0000); // hsl(228,100%,74%)
+const float3 SP6 = float3(0.8470, 0.4600, 1.0000); // hsl(283,100%,73%)
+
+// base.css 는 .card__shine / :before / :after 마다 6색 순서를 돌려 쓴다.
+//  shine=[1..6], :before=[5,6,1,2,3,4], :after=[6,1,2,3,4,5]
+int czMod6(int v) { return v - 6 * (v / 6); }
+
+float3 spPick(int i, int rot) {
+  int k = czMod6(i + rot);
+  if (k == 0) { return SP1; }
+  if (k == 1) { return SP2; }
+  if (k == 2) { return SP3; }
+  if (k == 3) { return SP4; }
+  if (k == 4) { return SP5; }
+  return SP6;
+}
+
+// repeating-linear-gradient(0deg, clr1 5%, clr2 10% ... clr1 35%)
+//  스톱 7개가 5% 간격 → 주기는 30%. 0deg 는 "아래에서 위로".
+float3 spRamp(float t, int rot) {
+  float u = mod((t - 0.05) / 0.30, 1.0) * 6.0;
+  int i = int(floor(u));
+  return mix(spPick(i, rot), spPick(i + 1, rot), fract(u));
+}
+`
+
+const VFA_COMMON = `
+const float3 VFA_DARK = float3(0.0549, 0.0824, 0.1804); // #0e152e
+const float3 VFA_MID  = float3(0.5600, 0.6400, 0.6400); // hsl(180,10%,60%)
+const float3 VFA_HI   = float3(0.5614, 0.7586, 0.7586); // hsl(180,29%,66%)
+
+// repeating-linear-gradient(133deg, #0e152e 0%, mid 3.8%, hi 4.5%, mid 5.2%, #0e152e 10%, #0e152e 12%)
+//  주기 12%. 10~12% 구간은 계속 어둡다.
+float3 vfaBand(float t) {
+  float u = mod(t, 0.12);
+  if (u < 0.038) { return mix(VFA_DARK, VFA_MID, u / 0.038); }
+  if (u < 0.045) { return mix(VFA_MID, VFA_HI, (u - 0.038) / 0.007); }
+  if (u < 0.052) { return mix(VFA_HI, VFA_MID, (u - 0.045) / 0.007); }
+  if (u < 0.100) { return mix(VFA_MID, VFA_DARK, (u - 0.052) / 0.048); }
+  return VFA_DARK;
+}
+
+// shine 배경 4겹 합성. after=1 이면 :after 쪽 위치/크기/색순서를 쓴다.
+//  배경 레이어는 아래에서 위로 쌓고, 알파를 끝까지 들고 간다.
+//  ④ 는 알파 0.1~0.25 의 검정이라 위 레이어가 대부분 그대로 통과한다.
+float4 vfaShineBg(float2 xy, int after) {
+  float bx = bgp.x;
+  float by = bgp.y;
+
+  // ④ 맨 아래: radial(farthest-corner circle at pointer) size 200% 100%, pos bgx bgy
+  float2 s4 = float2(2.0, 1.0);
+  float2 q4 = czBgXY(xy, res, s4, float2(bx, by));
+  float2 t4box = res * s4;
+  float4 r = czGrad3(czRadCircleT(q4, t4box, pointer * t4box),
+    float4(0.0, 0.0, 0.0, 0.10), 0.12,
+    float4(0.0, 0.0, 0.0, 0.15), 0.20,
+    float4(0.0, 0.0, 0.0, 0.25), 1.20);
+
+  // ③ 133° 청록 띠 — size 300%/195% × 100%, pos (bgx + bgy*0.2) bgy  (:after 는 부호 반전)
+  float2 s3 = after == 1 ? float2(1.95, 1.0) : float2(3.0, 1.0);
+  float px3 = bx + by * 0.2;
+  float2 p3 = after == 1 ? float2(-px3, -by) : float2(px3, by);
+  float2 q3 = czBgXY(xy, res, s3, p3);
+  float3 l3 = vfaBand(czLinT(q3, res * s3, 133.0));
+  r = czComposite(${BLEND['hard-light']}, r, float4(l3, 1.0));
+
+  // ② sunpillar 6색 — size 200% × 700%/400%, pos 0% bgy
+  float2 s2 = after == 1 ? float2(2.0, 4.0) : float2(2.0, 7.0);
+  float2 q2 = czBgXY(xy, res, s2, float2(0.0, by));
+  float3 l2 = spRamp(czLinT(q2, res * s2, 0.0), after == 1 ? 5 : 0);
+  r = czComposite(${BLEND.hue}, r, float4(l2, 1.0));
+
+  // ① 맨 위: 포일 텍스처. 마스크가 있으면 cover, 없으면 illusion 33% 타일.
+  float4 l1 = hasFoil > 0.5
+    ? float4(foilT.eval(xy))
+    : float4(texA.eval(mod(xy, res * 0.33)));
+  int topBlend = hasFoil > 0.5 ? ${BLEND['soft-light']} : ${BLEND.exclusion};
+  r = czComposite(topBlend, r, l1);
+  return r;
+}
+`
+
+const V_FULL_ART = `
+${SUNPILLAR}
+${VFA_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  float2 at = pointer * res;
+
+  if (opacity > 0.001 && m > 0.001) {
+    // shine 본체
+    float4 sh4 = vfaShineBg(xy, 0);
+    float3 sh = hasFoil > 0.5
+      ? czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.4 + 0.4), 1.4), 2.25)
+      : czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.3 + 0.35), 2.0), 1.5);
+
+    // :before — 포인터 흰 점, overlay, opacity .75 (마스크 없을 땐 display:none)
+    if (hasFoil > 0.5) {
+      float4 gb = czGrad2(czRadCircleT(xy, res, at),
+        float4(1.0, 1.0, 1.0, 1.0), 0.00,
+        float4(0.0, 0.0, 0.0, 0.0), 0.40);
+      sh = czOver(${BLEND.overlay}, sh, gb.rgb, gb.a * 0.75);
+    }
+
+    // :after — 같은 4겹을 다른 위치/색순서로 만들어 exclusion
+    float4 sa4 = vfaShineBg(xy, 1);
+    float3 sa = hasFoil > 0.5
+      ? czSaturate(czContrast(czBright(sa4.rgb, pfc * 0.4 + 0.8), 1.5), 1.25)
+      : czSaturate(czContrast(czBright(sa4.rgb, pfc * 0.5 + 0.8), 1.6), 1.4);
+    sh = czOver(${BLEND.exclusion}, sh, sa, sa4.a);
+
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * sh4.a);
+  }
+
+  // glare — size 120% 150%, hard-light, opacity *.75
+  float go = opacity * 0.75;
+  if (go > 0.001) {
+    float2 sg = float2(1.2, 1.5);
+    float2 qg = czBgXY(xy, res, sg, float2(50.0));
+    float2 gbox = res * sg;
+    float4 g = czGrad3(czRadCircleT(qg, gbox, pointer * gbox),
+      float4(0.7500, 0.7500, 0.7500, 1.0), 0.05,
+      float4(0.3325, 0.3558, 0.3675, 1.0), 0.60,
+      float4(0.1400, 0.0600, 0.1133, 1.0), 1.50);
+    float3 cg = czSaturate(czContrast(czBright(g.rgb, 1.0), 1.2), 1.0);
+    col = czOver(${BLEND['hard-light']}, col, cg, g.a * go);
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// trainer-full-art — v-full-art 를 상속하고 필터만 다르다.
+//   :before 가 다른 그라디언트(80% 까지 퍼지는 흰 점, screen, opacity .5),
+//   glare 는 multiply + size 170%.
+//   원본: public/css/cards/trainer-full-art.css
+// ─────────────────────────────────────────────────────────────
+const TRAINER_FULL_ART = `
+${SUNPILLAR}
+${VFA_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  float2 at = pointer * res;
+
+  if (opacity > 0.001 && m > 0.001) {
+    float4 sh4 = vfaShineBg(xy, 0);
+    float3 sh = hasFoil > 0.5
+      ? czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.05 + 0.8), 1.75), 1.2)
+      : czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.05 + 0.6), 1.5), 1.2);
+
+    // :before — screen, opacity .5, 80% 까지 퍼진다
+    float4 gb = czGrad2(czRadCircleT(xy, res, at),
+      float4(1.0, 1.0, 1.0, 1.0), 0.00,
+      float4(0.0, 0.0, 0.0, 0.0), 0.80);
+    sh = czOver(${BLEND.screen}, sh, gb.rgb, gb.a * 0.5);
+
+    float4 sa4 = vfaShineBg(xy, 1);
+    float3 sa = czSaturate(czContrast(czBright(sa4.rgb, pfc * 0.4 + 0.85), 2.0), 0.5);
+    sh = czOver(${BLEND.exclusion}, sh, sa, sa4.a);
+
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * sh4.a);
+  }
+
+  // glare — base.css 의 흰 radial 을 size 170% 로, multiply
+  float go = opacity * 0.75;
+  if (go > 0.001) {
+    float2 sg = float2(1.7);
+    float2 qg = czBgXY(xy, res, sg, float2(50.0));
+    float2 gbox = res * sg;
+    float4 g = czGrad3(czRadCircleT(qg, gbox, pointer * gbox),
+      float4(1.0, 1.0, 1.0, 0.80), 0.10,
+      float4(1.0, 1.0, 1.0, 0.65), 0.20,
+      float4(0.0, 0.0, 0.0, 0.50), 0.90);
+    float3 cg = czSaturate(czContrast(czBright(g.rgb, 1.5), 1.4), 1.0);
+    col = czOver(${BLEND.multiply}, col, cg, g.a * go);
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// tg-v (갤러리 V) — shine 은 v-full-art 그대로, glare 만 base.css + opacity ×.4
+//   원본: trainer-gallery-v-regular.css (glare 규칙 한 줄뿐)
+//   갤러리 카드는 v-full-art 의 :before 선택자에 안 걸려서 흰 점이 없다.
+// ─────────────────────────────────────────────────────────────
+const TG_V = `
+${SUNPILLAR}
+${VFA_COMMON}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = hxMask(xy, uv);
+  if (opacity > 0.001 && m > 0.001) {
+    float4 sh4 = vfaShineBg(xy, 0);
+    float3 sh = czSaturate(czContrast(czBright(sh4.rgb, pfc * 0.4 + 0.4), 1.4), 2.25);
+    float4 sa4 = vfaShineBg(xy, 1);
+    float3 sa = czSaturate(czContrast(czBright(sa4.rgb, pfc * 0.4 + 0.8), 1.5), 1.25);
+    sh = czOver(${BLEND.exclusion}, sh, sa, sa4.a);
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity * sh4.a);
+  }
+
+  float go = opacity * 0.4;
+  if (go > 0.001) {
+    float4 g = czGrad3(czRadCircleT(xy, res, pointer * res),
+      float4(1.0, 1.0, 1.0, 0.80), 0.10,
+      float4(1.0, 1.0, 1.0, 0.65), 0.20,
+      float4(0.0, 0.0, 0.0, 0.50), 0.90);
+    col = czOver(${BLEND.overlay}, col, g.rgb, g.a * go);
+  }
+  return col;
+}
+`
+
+// ─────────────────────────────────────────────────────────────
+// trainer-gallery-holo — 무지개 띠 -22° 한 겹 + 타원 광택
+//   원본: public/css/cards/trainer-gallery-holo.css
+//   홀로가 카드 거의 전체에 뜬다 (clip-borders = 얇은 테두리만 뺀 영역).
+// ─────────────────────────────────────────────────────────────
+const TRAINER_GALLERY_HOLO = `
+const float4 TGH1 = float4(0.6849, 0.4040, 0.7960, 0.75);
+const float4 TGH2 = float4(0.8934, 0.3068, 0.2866, 0.75);
+const float4 TGH3 = float4(0.8449, 0.7714, 0.2151, 0.75);
+const float4 TGH4 = float4(0.4931, 0.7888, 0.2512, 0.75);
+const float4 TGH5 = float4(0.3100, 0.6900, 0.6647, 0.75);
+const float4 TGH6 = float4(0.5400, 0.6320, 1.0000, 0.75);
+
+float4 tghPick(int i) {
+  int k = i - 6 * (i / 6);
+  if (k == 0) { return TGH1; }
+  if (k == 1) { return TGH2; }
+  if (k == 2) { return TGH3; }
+  if (k == 3) { return TGH4; }
+  if (k == 4) { return TGH5; }
+  return TGH6;
+}
+
+// 스톱 7개가 5% 간격 → 주기 30%
+float4 tghRamp(float t) {
+  float u = mod((t - 0.05) / 0.30, 1.0) * 6.0;
+  int i = int(floor(u));
+  return mix(tghPick(i), tghPick(i + 1), fract(u));
+}
+
+// clip-borders: inset(2.8% 4% round ...) — 얇은 테두리를 뺀 영역
+float tghBorders(float2 uv) {
+  float x = uv.x * 100.0;
+  float y = uv.y * 100.0;
+  float e = 0.3;
+  float mx = smoothstep(4.0 - e, 4.0 + e, x) * (1.0 - smoothstep(96.0 - e, 96.0 + e, x));
+  float my = smoothstep(2.8 - e, 2.8 + e, y) * (1.0 - smoothstep(97.2 - e, 97.2 + e, y));
+  return mx * my;
+}
+
+float3 hxEffect(float3 col, float2 xy, float2 uv) {
+  float m = tghBorders(uv);
+  if (opacity > 0.001 && m > 0.001) {
+    // 무지개 띠 — size 300% 400%, pos 0% bgy, -22deg
+    float2 sz = float2(3.0, 4.0);
+    float2 q = czBgXY(xy, res, sz, float2(0.0, bgp.y));
+    float4 rb = tghRamp(czLinT(q, res * sz, -22.0));
+    float3 sh = rb.rgb * rb.a; // 알파 .75 를 검정 위에 얹은 셈
+    sh = czSaturate(czContrast(czBright(sh, pfc * 0.3 + 0.5), 2.3), 1.0);
+
+    // :after — 타원 광택. 중심이 포인터의 절반만 따라간다 (px*0.5+25%)
+    float2 sa = float2(4.0, 5.0);
+    float2 qa = czBgXY(xy, res, sa, float2(50.0));
+    float2 abox = res * sa;
+    float2 aat = float2(pointer.x * 0.5 + 0.25, pointer.y * 0.5 + 0.25) * abox;
+    float4 ga = czGrad3(czRadEllipseT(qa, abox, aat),
+      float4(1.0000, 1.0000, 1.0000, 1.0), 0.05,
+      float4(0.2200, 0.0000, 0.2200, 0.6), 0.40,
+      float4(0.2200, 0.2200, 0.2200, 1.0), 1.20);
+    float3 caf = czSaturate(czContrast(czBright(ga.rgb, pfc * 0.2 + 0.4), 0.85), 1.1);
+    sh = czOver(${BLEND['hard-light']}, sh, caf, ga.a);
+
+    col = czOver(${BLEND['color-dodge']}, col, sh, m * opacity);
+  }
+
+  // glare — soft-light
+  if (opacity > 0.001) {
+    float4 g = czGrad3(czRadCircleT(xy, res, pointer * res),
+      float4(1.0000, 1.0000, 1.0000, 1.0), 0.10,
+      float4(1.0000, 1.0000, 1.0000, 0.6), 0.35,
+      float4(0.3115, 0.3885, 0.3885, 1.0), 0.60);
+    col = czOver(${BLEND['soft-light']}, col, g.rgb, g.a * opacity);
+  }
+  return col;
+}
+`
+
+/** 효과별로 필요한 텍스처 URL. texA / texB / texC 순서로 바인딩된다. */
+const IMG = 'https://poke-holo.simey.me/img'
+export const EFFECT_TEXTURES: Partial<Record<EffectKey, string[]>> = {
+  'v-full-art': [`${IMG}/illusion.png`],
+  'trainer-full-art': [`${IMG}/trainerbg.png`],
+  'tg-v': [`${IMG}/illusion.png`],
+}
+
 const BODIES: Partial<Record<EffectKey, string>> = {
   basic: BASIC,
   'regular-holo': REGULAR_HOLO,
   'reverse-holo': REVERSE_HOLO,
+  'v-full-art': V_FULL_ART,
+  'trainer-full-art': TRAINER_FULL_ART,
+  'tg-v': TG_V,
+  'trainer-gallery-holo': TRAINER_GALLERY_HOLO,
 }
 
 /** 아직 옮기지 않은 효과. basic 으로 대체하고 화면에 표시한다. */

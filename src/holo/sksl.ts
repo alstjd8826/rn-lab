@@ -120,6 +120,18 @@ float3 czOver(int m, float3 b, float3 s, float a) {
   return mix(b, czBlend(m, b, s), a);
 }
 
+// 둘 다 알파를 가질 때의 정식 합성 (CSS Compositing §general-formula).
+//  background-image 레이어를 쌓을 때 이걸 써야 한다.
+//  배경이 반투명하면 위 레이어가 그만큼 "그대로 통과"한다 —
+//  배경을 불투명 검정으로 취급하면 전부 어두워진다.
+float4 czComposite(int m, float4 b, float4 s) {
+  float ao = s.a + b.a * (1.0 - s.a);
+  float3 co = s.a * (1.0 - b.a) * s.rgb
+            + s.a * b.a * czBlend(m, b.rgb, s.rgb)
+            + (1.0 - s.a) * b.a * b.rgb;
+  return float4(ao > 0.0 ? co / ao : float3(0.0), ao);
+}
+
 // ================= 필터 =================
 //  스펙상 필터 함수는 각 단계마다 0..1 로 클램프된다. 체인 끝에서 한 번이 아니다.
 float3 czBright(float3 c, float k) { return clamp(c * k, 0.0, 1.0); }

@@ -16,7 +16,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import type { HoloCard as CardData } from './cards'
-import { buildShader } from './effects'
+import { buildShader, EFFECT_TEXTURES } from './effects'
 
 // 카드 한 장. 원본 Card.svelte 의 상호작용을 그대로 옮겼다.
 //   포인터 → rotate / glare / background / opacity 네 값이 스프링으로 따라간다.
@@ -49,6 +49,12 @@ export default function HoloCard({
   const img = useImage(card.img)
   const mask = useImage(card.mask)
   const foil = useImage(card.foil)
+
+  // 효과별 텍스처. 슬롯 3개는 항상 채워야 하므로 없으면 카드로 대신한다.
+  const texUrls = EFFECT_TEXTURES[card.effect] ?? []
+  const texA = useImage(texUrls[0] ?? card.img)
+  const texB = useImage(texUrls[1] ?? card.img)
+  const texC = useImage(texUrls[2] ?? card.img)
 
   const source = useMemo(() => Skia.RuntimeEffect.Make(buildShader(card.effect)), [card.effect])
 
@@ -88,6 +94,8 @@ export default function HoloCard({
     })
 
   const hasFoil = mask !== null && foil !== null
+  const texAW = texA?.width() ?? 1
+  const texAH = texA?.height() ?? 1
   const fb = foilBrightness(card.types)
   const isStage = card.subtypes.join(' ').toLowerCase().startsWith('stage')
 
@@ -106,6 +114,7 @@ export default function HoloCard({
       hasFoil: hasFoil ? 1 : 0,
       foilBright: fb,
       stage: isStage ? 1 : 0,
+      texASize: [texAW, texAH],
     }
   })
 
@@ -142,6 +151,10 @@ export default function HoloCard({
                     x={0} y={0} width={W} height={H}
                     fit="fill" tx="clamp" ty="clamp"
                   />
+                  {/* 효과별 텍스처는 원본 크기로 두고 셰이더에서 타일링한다 */}
+                  <ImageShader image={texA ?? img} fit="none" tx="repeat" ty="repeat" />
+                  <ImageShader image={texB ?? img} fit="none" tx="repeat" ty="repeat" />
+                  <ImageShader image={texC ?? img} fit="none" tx="repeat" ty="repeat" />
                 </Shader>
               </Fill>
             )}

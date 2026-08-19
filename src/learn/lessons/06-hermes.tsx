@@ -153,6 +153,16 @@ export const lesson06: Lesson = {
   title: 'Hermes',
   summary: '앱 켤 때 JS 를 해석하지 않게 만든 모바일 전용 엔진',
 
+  sources: [
+    'reactnative.dev/docs/hermes — 빌드 타임 바이트코드, JSC 대비 이점, isHermes 확인법',
+    'reactnative.dev/blog/2026/02/11/react-native-0.84 — V1 이 양 플랫폼 기본',
+    'github.com/facebook/hermes doc/Design.md — 바이트코드 생성과 인터프리터 실행',
+    '이 앱 실측 — getRuntimeProperties(): GC=hades(concurrent), Bytecode Version 98',
+    '이 앱 실측 — main.jsbundle 매직 바이트, GC 통계(150MB/43회/45ms)',
+    '※ mmap · 지연 컴파일 · JIT 워밍업 논지는 1차 출처를 못 찾음. 일반적 설명',
+    '※ V1 의 세부 변경(바이트코드 포맷 등)은 출처 불명이라 본문에서 뺐음',
+  ],
+
   chapters: [
     {
       heading: '1. 무슨 문제를 푸는 건가',
@@ -218,12 +228,28 @@ export const lesson06: Lesson = {
             '               파싱 단계가 아예 없음',
         },
         {
-          kind: 'prose',
+          kind: 'code',
+          path: '공식 원문 · docs/hermes',
+          code:
+            'This will compile JavaScript to Hermes Bytecode\n' +
+            'during build time which will improve your app\'s\n' +
+            'startup speed on device.\n' +
+            '\n' +
+            'For many apps, using Hermes will result in\n' +
+            'improved start-up time, decreased memory usage,\n' +
+            'and smaller app size when compared to\n' +
+            'JavaScriptCore.',
+          highlight: [0, 1, 2],
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
+          title: '아래 두 가지는 근거가 약합니다',
           text:
-            '여기에 두 가지가 더 붙습니다.\n\n' +
-            '**메모리 매핑(mmap)** — 파일을 통째로 올리지 않고 매핑만 해둡니다. ' +
-            '실제 실행되는 부분만 OS 가 페이지 단위로 읽어옵니다.\n\n' +
-            '**지연 컴파일** — 시작에 필요한 함수만 준비하고 나머지는 처음 호출될 때 처리합니다.',
+            '**메모리 매핑(mmap)** — 파일을 통째로 올리지 않고 매핑만 해둔다.\n' +
+            '**지연 컴파일** — 시작에 필요한 함수만 준비하고 나머지는 나중에.\n\n' +
+            '둘 다 널리 알려진 설명이지만 **RN 문서에도 Hermes 설계 문서에도 없습니다.** ' +
+            '확인된 것은 "빌드 타임에 바이트코드로 컴파일한다" 까지입니다.',
         },
       ],
     },
@@ -288,10 +314,15 @@ export const lesson06: Lesson = {
           ],
         },
         {
-          kind: 'prose',
+          kind: 'callout',
+          tone: 'key',
+          title: '이건 엔진이 직접 말해줍니다',
           text:
-            'Hermes 는 이걸 **동시(concurrent) GC** 로 만들었고 이름이 Hades 입니다. ' +
-            '아래 실험에서 실제로 도는 걸 숫자로 봅니다.',
+            'Hades 는 RN 문서에도 Hermes 설계 문서에도 설명이 없습니다. ' +
+            '대신 **런타임에 물어보면 답합니다** — `getRuntimeProperties()` 가 ' +
+            '`"GC": "hades (concurrent)"` 를 돌려줍니다.\n\n' +
+            '문서보다 확실한 근거입니다. 엔진 자신이 보고하는 값이니까요. ' +
+            '아래 실험 1 에서 직접 확인할 수 있습니다.',
         },
       ],
     },
@@ -303,10 +334,29 @@ export const lesson06: Lesson = {
         {
           kind: 'prose',
           text:
-            '**RN 0.84(2026년 2월)부터 Hermes V1 이 양 플랫폼 기본**이 됐습니다. ' +
-            '컴파일러 재작성, 새 바이트코드 포맷, 최신 JS 문법 지원 대폭 개선이 들어갔습니다.\n\n' +
-            '초기 Hermes 의 최대 약점이 “최신 문법 지원이 늦다” 였는데 그게 해소된 버전입니다. ' +
+            '**RN 0.84 부터 Hermes V1 이 양 플랫폼 기본**이 됐습니다. ' +
             '좋은 점은 **할 게 없다는 것**입니다. 설정 변경도 마이그레이션도 없습니다.',
+        },
+        {
+          kind: 'code',
+          path: '공식 원문 · blog/2026-02-11 react-native-0.84',
+          code:
+            'Hermes V1 is now the default JavaScript engine\n' +
+            'for React Native on both iOS and Android.\n' +
+            '\n' +
+            'Hermes V1 represents the next evolution of the\n' +
+            'Hermes engine, with significant improvements to\n' +
+            'both the compiler and VM.',
+          highlight: [0, 1],
+        },
+        {
+          kind: 'callout',
+          tone: 'warn',
+          title: 'V1 에 대해 더 말할 수 있는 게 별로 없습니다',
+          text:
+            '공식 발표문이 말하는 건 **"컴파일러와 VM 개선, 메모리 사용 감소"** 정도입니다. ' +
+            '새 바이트코드 포맷·JIT·문법 지원 같은 구체적인 내용은 **1차 출처에서 확인하지 못했습니다.**\n\n' +
+            '인터넷에 도는 상세 설명들이 있지만 출처를 못 찾아서 이 교재에서는 뺐습니다.',
         },
         {
           kind: 'callout',

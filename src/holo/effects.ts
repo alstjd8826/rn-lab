@@ -1,6 +1,8 @@
 import { BLEND, SKSL_PRELUDE } from './sksl'
 import type { EffectKey } from './cards'
 
+export type { EffectKey }
+
 // 등급별 홀로 효과. 각 효과는 hxEffect() 하나를 정의한다.
 //  원본 CSS 한 파일 = 여기 한 항목. 레이어 순서·블렌드·필터를 그대로 옮긴다.
 //
@@ -43,6 +45,11 @@ float hxArtMask(float2 uv) {
   float my = smoothstep(top - e, top + e, y) * (1.0 - smoothstep(47.15 - e, 47.15 + e, y));
   return mx * my;
 }
+
+// 원본 CSS 는 카드 폭이 300pt 라는 걸 전제로 절대 px 값을 몇 군데 쓴다.
+//  (grain 타일 500px, radiant 파스텔 주기 1200px, glitter 흔들림 1px)
+//  다른 크기 사물에도 같은 비율로 보이게 300 기준으로 환산한다.
+float hxPx(float v) { return v * res.x / 300.0; }
 
 // --clip-borders = inset(2.8% 4% round ...) — 얇은 테두리만 뺀 영역
 float hxBorders(float2 uv) {
@@ -596,7 +603,7 @@ float3 vfaBand(float t) {
 
 // grain — background-size: 500px 100%, position center, 기본 repeat
 float4 vrGrain(float2 xy) {
-  float2 tile = float2(500.0, res.y);
+  float2 tile = float2(hxPx(500.0), res.y);
   float2 q = xy - 0.5 * (res - tile);
   return float4(texA.eval(fract(q / tile) * texASize));
 }
@@ -1168,7 +1175,7 @@ float3 hxEffect(float3 col, float2 xy, float2 uv) {
     // :after — glitter 를 포인터에 따라 1px 어긋나게 깔고 overlay
     float2 tile = res * 0.25;
     float2 q = xy - 0.5 * (res - tile)
-             - (float2(1.0) - 2.0 * float2(pfl, pft));
+             - (float2(1.0) - 2.0 * float2(pfl, pft)) * hxPx(1.0);
     float4 ga = float4(texA.eval(fract(q / tile) * texASize));
     float3 gaf = czContrast(czBright(ga.rgb, pfc * 0.6 + 0.6), 1.5);
     r = float4(czOver(${BLEND.overlay}, r.rgb, gaf, ga.a), r.a);
@@ -1371,7 +1378,7 @@ ${RAINBOW_COMMON}
 float4 pkGlitter(float2 xy, float sign) {
   float2 tile = res * 0.25;
   float2 q = xy - 0.5 * (res - tile)
-           - (float2(1.0) - 2.0 * float2(pfl, pft)) * sign;
+           - (float2(1.0) - 2.0 * float2(pfl, pft)) * sign * hxPx(1.0);
   return float4(texA.eval(fract(q / tile) * texASize));
 }
 
@@ -1468,7 +1475,7 @@ float3 rdPick(int i) {
 // --space 가 200px (퍼센트가 아니다) → 그라디언트 선 위 200px 간격, 주기 1200px
 float3 rdPastel(float len, float t) {
   float px = t * len;
-  float u = mod((px - 200.0) / 1200.0, 1.0) * 6.0;
+  float u = mod((px - hxPx(200.0)) / hxPx(1200.0), 1.0) * 6.0;
   int i = int(floor(min(u, 5.999)));
   return mix(rdPick(i), rdPick(i + 1), fract(u));
 }
@@ -1664,7 +1671,7 @@ float3 hxEffect(float3 col, float2 xy, float2 uv) {
 
     float2 tile = res * 0.25;
     float2 q = xy - 0.5 * (res - tile)
-             - (float2(1.0) - 2.0 * float2(pfl, pft));
+             - (float2(1.0) - 2.0 * float2(pfl, pft)) * hxPx(1.0);
     float4 ga = float4(texA.eval(fract(q / tile) * texASize));
     float3 gaf = czContrast(czBright(ga.rgb, pfc * 0.6 + 0.6), 1.5);
     r = float4(czOver(${BLEND.overlay}, r.rgb, gaf, ga.a), r.a);

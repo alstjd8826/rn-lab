@@ -6,7 +6,7 @@ import HoloCard from './HoloCard'
 //  원본 CSS 를 띄운 Safari 스크린샷과 픽셀 비교하기 위한 것이고,
 //  PROBE_ID 를 스크립트가 바꿔가며 22개 효과를 한 바퀴 돌린다.
 //  포인터 값은 정답 페이지(ref-*.html)와 같아야 한다 — 25% / 10%.
-export const PROBE_ID = 'swsh12pt5-160'
+export const PROBE_ID = 'pgo-24'
 
 export default function HoloProbe() {
   const card = CARDS.find((c) => c.id === PROBE_ID) ?? CARDS[0]
